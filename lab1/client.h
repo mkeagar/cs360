@@ -15,23 +15,24 @@
 
 using namespace std;
 
-class Client {
-public:
-    Client(string, int);
-    ~Client();
+class Client
+{
+	public:
+		Client(string, int);
+		~Client();
 
-private:
+	private:
 
-    void create();
-    void getInput();
-    void echo();
-    bool send_request(string);
-    bool get_response();
-
-    int port_;
-    string host_;
-    int server_;
-    int buflen_;
-    char* buf_;
-    bool run_;
+		void create();
+		void getInput();
+		void echo();
+		bool send_request(string);
+		bool get_response();
+		
+		int port_;
+		string host_;
+		int server_;
+		int buflen_;
+		char* buf_;
+		bool run_;
 };

@@ -1,6 +1,7 @@
 #include "client.h"
 
-Client::Client(string host, int port) {
+Client::Client(string host, int port)
+{
     // setup variables
     host_ = host;
     port_ = port;
@@ -12,17 +13,19 @@ Client::Client(string host, int port) {
     getInput();
 }
 
-Client::~Client() {
+Client::~Client()
+{
 }
 
-void
-Client::create() {
+void Client::create()
+{
     struct sockaddr_in server_addr;
 
     // use DNS to get IP address
     struct hostent *hostEntry;
     hostEntry = gethostbyname(host_.c_str());
-    if (!hostEntry) {
+    if (!hostEntry)
+	{
         cout << "No such host name: " << host_ << endl;
         exit(-1);
     }
@@ -35,20 +38,22 @@ Client::create() {
 
     // create socket
     server_ = socket(PF_INET,SOCK_STREAM,0);
-    if (!server_) {
+    if (!server_)
+	{
         perror("socket");
         exit(-1);
     }
 
     // connect to server
-    if (connect(server_,(const struct sockaddr *)&server_addr,sizeof(server_addr)) < 0) {
+    if (connect(server_,(const struct sockaddr *)&server_addr,sizeof(server_addr)) < 0)
+	{
         perror("connect");
         exit(-1);
     }
 }
 
-void
-Client::getInput() {
+void Client::getInput()
+{
     string line = "";
 
     // runs until the quit command is called
@@ -59,7 +64,8 @@ Client::getInput() {
         string endString = "\n\n";
         bool doneTyping = false;
 
-        while(!doneTyping) {
+        while(!doneTyping)
+		{
             getline(cin, line);
 			line += "\n";
             originalMessage += line;
@@ -126,24 +132,30 @@ Client::echo() {
 }
 */
 
-bool
-Client::send_request(string request) {
+bool Client::send_request(string request)
+{
     // prepare to send request
     const char* ptr = request.c_str();
     int nleft = request.length();
     int nwritten;
     // loop to be sure it is all sent
     while (nleft) {
-        if ((nwritten = send(server_, ptr, nleft, 0)) < 0) {
-            if (errno == EINTR) {
+        if ((nwritten = send(server_, ptr, nleft, 0)) < 0)
+		{
+            if (errno == EINTR)
+			{
                 // the socket call was interrupted -- try again
                 continue;
-            } else {
+            }
+			else
+			{
                 // an error occurred, so break out
                 perror("write");
                 return false;
             }
-        } else if (nwritten == 0) {
+        }
+		else if (nwritten == 0)
+		{
             // the socket is closed
             return false;
         }
@@ -153,20 +165,24 @@ Client::send_request(string request) {
     return true;
 }
 
-bool
-Client::get_response() {
+bool Client::get_response()
+{
     string response = "";
     // read until we get a newline
-    while (response.find("\n") == string::npos) {
+    while (response.find("\n") == string::npos)
+	{
         int nread = recv(server_,buf_,1024,0);
-        if (nread < 0) {
+        if (nread < 0)
+		{
             if (errno == EINTR)
                 // the socket call was interrupted -- try again
                 continue;
             else
                 // an error occurred, so break out
                 return "";
-        } else if (nread == 0) {
+        }
+		else if (nread == 0)
+		{
             // the socket is closed
             return "";
         }

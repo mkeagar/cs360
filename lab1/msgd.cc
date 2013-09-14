@@ -17,8 +17,10 @@ main(int argc, char **argv)
 
     // process command line options using getopt()
     // see "man 3 getopt"
-    while ((option = getopt(argc,argv,"p:")) != -1) {
-        switch (option) {
+    while ((option = getopt(argc,argv,"p:")) != -1)
+	{
+        switch (option)
+		{
             case 'p':
                 port = atoi(optarg);
                 break;

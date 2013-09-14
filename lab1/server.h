@@ -11,21 +11,22 @@
 
 using namespace std;
 
-class Server {
-public:
-    Server(int);
-    ~Server();
+class Server
+{
+	public:
+		Server(int);
+		~Server();
 
-private:
+	private:
 
-    void create();
-    void serve();
-    void handle(int);
-    string get_request(int);
-    bool send_response(int, string);
+		void create();
+		void serve();
+		void handle(int);
+		string get_request(int);
+		bool send_response(int, string);
 
-    int port_;
-    int server_;
-    int buflen_;
-    char* buf_;
+		int port_;
+		int server_;
+		int buflen_;
+		char* buf_;
 };
