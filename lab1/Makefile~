@@ -1,0 +1,33 @@
+# Makefile for socket examples
+
+CXX=			g++ $(CCFLAGS)
+MSGD=		msgd.o server.o
+MSG=		msg.o client.o
+OBJS =			$(MSGD) $(MSG) 
+
+LIBS=
+
+CCFLAGS= -g
+
+all:	msgd msg
+
+msgd:$(MSGD)
+	$(CXX) -o msgd $(MY-SERVER) $(LIBS)
+
+my-client:$(MY-CLIENT)
+	$(CXX) -o my-client $(MY-CLIENT) $(LIBS)
+
+clean:
+	rm -f $(OBJS) $(OBJS:.o=.d)
+
+realclean:
+	rm -f $(OBJS) $(OBJS:.o=.d) my-server my-client
+
+
+# These lines ensure that dependencies are handled automatically.
+%.d:	%.cc
+	$(SHELL) -ec '$(CC) -M $(CPPFLAGS) $< \
+		| sed '\''s/\($*\)\.o[ :]*/\1.o $@ : /g'\'' > $@; \
+		[ -s $@ ] || rm -f $@'
+
+include	$(OBJS:.o=.d)
