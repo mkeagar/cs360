@@ -1,20 +1,22 @@
 #include "client.h"
 
-Client::Client(string host, int port)
+Client::Client(string host, int port, bool debug)
 {
     // setup variables
     host_ = host;
     port_ = port;
     buflen_ = 1024;
     buf_ = new char[buflen_+1];
+    debugFlag_ = debug;
 
-    // connect to the server and run echo program
+    // connect to the server and run getInput()
     create();
     getInput();
 }
 
 Client::~Client()
 {
+	delete(buf_);
 }
 
 void Client::create()
@@ -54,45 +56,127 @@ void Client::create()
 
 void Client::getInput()
 {
-    string line = "";
-
+	string line = "";
+    string commandMessage = "";
+    string message = "";
+    string sendToServer = "";
+    bool doneTyping = false;
+    int commandNum = -1;
+    
     // runs until the quit command is called
     while (run_)
     {
         cout << "% ";
-        string originalMessage;
-        string endString = "\n\n";
-        bool doneTyping = false;
-
-        while(!doneTyping)
-		{
-            getline(cin, line);
-			line += "\n";
-            originalMessage += line;
-
-			if (originalMessage.rfind(endString) != -1)
-				doneTyping = true;
-        }
-
-        string commandMessage = originalMessage.substr(0, originalMessage.find("\n"));
-        string bodyMessage = originalMessage.substr(originalMessage.find("\n") + 1, originalMessage.length());
-
-		stringstream ss;
-		ss << bodyMessage.length();
-        string finalMessage = commandMessage + " " + ss.str() + "\n" + bodyMessage;
+        getline(cin, commandMessage);
+        commandNum = parseCommand(commandMessage);
         
-        bool success = send_request(finalMessage);
-        // break if an error occurred
-        if (not success)
-            break;
-        // get a response
-        success = get_response();
-        // break if an error occurred
-        if (not success)
-            break;
+        switch (commandNum)
+        {
+        	case 1:			// send
+        		if (debugFlag_)
+        			cout << "[DEBUG] The user entered the send command.  Now we get the rest of the message." << endl;
+        		
+        		cout << "- Type your message. End with a blank line -" << endl;
+        		while (!doneTyping)
+        		{
+					getline(cin, line);
+					if (line == "")	// We've reached the end of the message.
+						doneTyping = true;
+					else				// Append the current line.
+					{
+						line += "\n";
+						message += line;
+					}
+        		}
+        		
+        		if (debugFlag_)
+        			cout << "[DEBUG] the message to send is: " << message << endl;
+        		break;
+        	
+        	case 2:			// list
+        		if (debugFlag_)
+        			cout << "[DEBUG] The user requested the list of messages for a user." << endl;
+        		break;	
+
+        	case 3:			// read
+        		if (debugFlag_)
+        			cout << "[DEBUG] The user requested to read a message for a user." << endl;
+        		break;
+        		
+			case 4:			// quit
+				if (debugFlag_)
+					cout << "[DEBUG] The client will now quit." << endl;
+				run_ = false;
+				break;
+				
+			default:
+				cout << "That is not a valid command." << endl;
+				if (debugFlag_)
+					cout << "[DEBUG] The user has typed an invalid command." << endl;
+        
+        }
+        
+        if (commandNum != 4 && commandNum != -1)	// if user wants to quit, or the command is invalid, don't do this stuff
+        {
+        	sendToServer = processCommand(commandNum, commandMessage, message);
+        	if (debugFlag_)
+        		cout << "[DEBUG] sendToServer: " << sendToServer << endl
+        	bool success = send_request(sendToServer);
+        	
+        	//break if an error occurred
+        	if (!success)
+        	{
+        		if (debugFlag_)
+	        		cout << "[DEBUG] send_request() was not successful." << endl;
+	        	continue;
+	        }
+	        
+	        // get a response
+        	success = get_response();
+        	
+        	// break if an error occurred
+        	if (!success)
+        	{
+        		if (debugFlag_)
+        			cout << "[DEBUG] get_response() was not successful." << endl;
+				continue;
+	        }
+        }
+		
+//        
+//        
+//        string originalMessage = "";
+//        string endString = "\n\n";
+
+
+//        while(!doneTyping)
+//		{
+//            getline(cin, line);
+//			line += "\n";
+//            originalMessage += line;
+
+//			if (originalMessage.rfind(endString) != -1)
+//				doneTyping = true;
+//        }
+
+//        string commandMessage = originalMessage.substr(0, originalMessage.find("\n"));
+//        string bodyMessage = originalMessage.substr(originalMessage.find("\n")+1, originalMessage.length()-1);
+
+//		stringstream ss;
+//		ss << bodyMessage.length();
+//        string finalMessage = commandMessage + " " + ss.str() + "\n" + bodyMessage;
+//        
+//        bool success = send_request(finalMessage);
+//        // break if an error occurred
+//        if (not success)
+//            break;
+//        // get a response
+//        success = get_response();
+//        // break if an error occurred
+//        if (not success)
+//            break;
     }
     close(server_);
-
 
 /*
 * At this point, I should have one long string that looks like:
@@ -108,29 +192,61 @@ void Client::getInput()
 
 }
 
-/*
-void
-Client::echo() {
-    string line;
-    
-    // loop to handle user interface
-    while (getline(cin,line)) {
-        // append a newline
-        line += "\n";
-        // send request
-        bool success = send_request(line);
-        // break if an error occurred
-        if (not success)
-            break;
-        // get a response
-        success = get_response();
-        // break if an error occurred
-        if (not success)
-            break;
-    }
-    close(server_);
+int Client::parseCommand(string commandMessage)
+{
+	stringstream ss (commandMessage);
+	string command = "";
+	ss >> command;
+	
+	if (command == "send")
+		return 1;
+	else if (command == "list")
+		return 2;
+	else if (command == "read")
+		return 3;
+	else if (command == "quit")
+		return 4;
+	else
+		return -1;
 }
-*/
+
+string Client::processCommand(int commandNum, string commandMessage, string message)
+{	
+	string command = "";
+	string user = "";
+	string subject = "";
+	string index = "";
+	int length;
+	stringstream ss (commandMessage);
+	stringstream requestMessage("");
+	
+	switch (commandNum)
+	{
+		case 1:				// sending a message, so let's put it together.
+			ss >> command >> user >> subject;
+			length = message.length();
+			requestMessage << "put " << user << " " << subject << " " << length << endl << message;
+			break;
+			
+		case 2:
+			ss >> command >> user;
+			requestMessage << command << " " << user << endl;
+			break;
+			
+		case 3:
+			ss >> command >> user >> index;
+			requestMessage << "get " << user << " " << index << endl;
+			break;
+			
+		default:
+			if (debugFlag_)
+				cout << "You should never see this debug statement." << endl;
+			break;
+	}
+	
+	return requestMessage.str();
+}
+
 
 bool Client::send_request(string request)
 {
@@ -171,7 +287,7 @@ bool Client::get_response()
     // read until we get a newline
     while (response.find("\n") == string::npos)
 	{
-        int nread = recv(server_,buf_,1024,0);
+        int nread = recv(server_,buf_,buflen_,0);
         if (nread < 0)
 		{
             if (errno == EINTR)
@@ -179,12 +295,12 @@ bool Client::get_response()
                 continue;
             else
                 // an error occurred, so break out
-                return "";
+                return false;
         }
 		else if (nread == 0)
 		{
             // the socket is closed
-            return "";
+            return false;
         }
         // be sure to use append in case we have binary data
         response.append(buf_,nread);

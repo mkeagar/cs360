@@ -29,4 +29,5 @@ class Server
 		int server_;
 		int buflen_;
 		char* buf_;
+		bool debugFlag_;
 };

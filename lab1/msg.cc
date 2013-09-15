@@ -14,10 +14,11 @@ int main(int argc, char **argv)
     // setup default arguments
     int port = 3000;
     string server = "localhost";
+    bool debug = false;
 
     // process command line options using getopt()
     // see "man 3 getopt"
-    while ((option = getopt(argc,argv,"s:p:")) != -1)
+    while ((option = getopt(argc,argv,"-s:-p:-d")) != -1)
 	{
         switch (option)
 		{
@@ -27,12 +28,15 @@ int main(int argc, char **argv)
             case 's':
                 server = optarg;
                 break;
+            case 'd':
+            	debug = true;
+            	break;
             default:
-                cout << "client [-s server] [-p port]" << endl;
+                cout << "msg [-s server] [-p port] [-d]" << endl;
                 exit(EXIT_FAILURE);
         }
     }
 
-    Client client = Client(server, port);
+    Client client = Client(server, port, debug);
+    exit(0);
 }
-
