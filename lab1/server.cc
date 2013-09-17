@@ -135,18 +135,74 @@ void Server::handle(int client)
         	}
         		
     		case 2:		// "list" command, so tell them what's in the postoffice
+    		{
     			if (debugFlag_)
         			cout << "[DEBUG] RECEIVED CLIENT REQUEST -> list" << endl;
+        			
+        		string command = "";
+				string user = "";
+				stringstream ss (request);
+				stringstream rs;
+	
+				if (ss >> command >> user)
+				{
+						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
+						if (itr == postoffice.end())
+							rs << "list 0\n";
+						else
+						{
+							rs << "list " << postoffice[user].size() << "\n";
+							
+							int i = 0;
+							for (i = 0; i < postoffice[user].size(); i++)
+								rs << (i) << " " << postoffice[user].at(i).sub << "\n";
+							
+							response = rs.str();
+						}
+				}
+				else
+					response = "error INVALID LIST REQUEST\n";
+        			
     			break;
+    		}
     			
 			case 3:		// "get" command, send them what they want
+			{
 				if (debugFlag_)
         			cout << "[DEBUG] RECEIVED CLIENT REQUEST -> get" << endl;
-				break;
+    			
+				string command = "";
+				string user = "";
+				int index = 0;
+				stringstream ss (request);
+				stringstream rs;
+	
+				if (ss >> command >> user >> index)
+				{
+						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
+						if (itr == postoffice.end())
+							rs << "error USER NOT FOUND\n";
+						else if (postoffice[user].size() < index || index < 0)
+						{
+							rs << "error NO MESSAGE AT INDEX\n";
+						}
+						else
+						{
+							rs << "message " << postoffice[user].at(index).sub << " "  << postoffice[user].at(index).msg.length() << "\n" << postoffice[user].at(index).msg;							
+							response = rs.str();
+						}
+				}
+				else
+					response = "error INVALID GET REQUEST\n";
+        			
+    			break;
+			}
 			
 			case 4:		// "reset" command, empty the postoffice
 				if (debugFlag_)
         			cout << "[DEBUG] RECEIVED CLIENT REQUEST -> reset" << endl;
+				postoffice.clear();
+				response = "OK\n";
 				break;
 				
 			default:	// default behavior!

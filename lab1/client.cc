@@ -65,7 +65,13 @@ void Client::getInput()
     
     // runs until the quit command is called
     while (run_)
-    {
+    {	
+    	message = "";
+    	line = "";
+    	commandMessage = "";
+    	sendToServer = "";
+    	doneTyping = false;
+    	commandNum = -1;
         cout << "% ";
         getline(cin, commandMessage);
         commandNum = parseCommand(commandMessage);
