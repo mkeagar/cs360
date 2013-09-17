@@ -120,7 +120,7 @@ void Client::getInput()
         {
         	sendToServer = processCommand(commandNum, commandMessage, message);
         	if (debugFlag_)
-        		cout << "[DEBUG] sendToServer: " << sendToServer << endl
+        		cout << "[DEBUG] sendToServer: " << sendToServer << endl;
         	bool success = send_request(sendToServer);
         	
         	//break if an error occurred
@@ -142,54 +142,8 @@ void Client::getInput()
 				continue;
 	        }
         }
-		
-//        
-//        
-//        string originalMessage = "";
-//        string endString = "\n\n";
-
-
-//        while(!doneTyping)
-//		{
-//            getline(cin, line);
-//			line += "\n";
-//            originalMessage += line;
-
-//			if (originalMessage.rfind(endString) != -1)
-//				doneTyping = true;
-//        }
-
-//        string commandMessage = originalMessage.substr(0, originalMessage.find("\n"));
-//        string bodyMessage = originalMessage.substr(originalMessage.find("\n")+1, originalMessage.length()-1);
-
-//		stringstream ss;
-//		ss << bodyMessage.length();
-//        string finalMessage = commandMessage + " " + ss.str() + "\n" + bodyMessage;
-//        
-//        bool success = send_request(finalMessage);
-//        // break if an error occurred
-//        if (not success)
-//            break;
-//        // get a response
-//        success = get_response();
-//        // break if an error occurred
-//        if (not success)
-//            break;
     }
     close(server_);
-
-/*
-* At this point, I should have one long string that looks like:
-* % send [user] [subject]
-* - Type your message. End with a blank line -
-* [message]
-* ...
-* [message]
-* blank line]
-*
-* User Commands: send, list, read, quit. Protocol Commands: put, list, get, reset.
-*/
-
 }
 
 int Client::parseCommand(string commandMessage)
