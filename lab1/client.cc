@@ -79,6 +79,7 @@ void Client::getInput()
         switch (commandNum)
         {
         	case 1:			// send
+        	{
         		if (debugFlag_)
         			cout << "[DEBUG] The user entered the send command.  Now we get the rest of the message." << endl;
         		
@@ -96,57 +97,188 @@ void Client::getInput()
         		}
         		
         		if (debugFlag_)
+        		{
         			cout << "[DEBUG] the message to send is: " << message << endl;
-        		break;
+				}
+				
+				sendToServer = processCommand(commandNum, commandMessage, message);
+				if (debugFlag_)
+				{
+					cout << "[DEBUG] sendToServer: " << sendToServer << endl;
+				}
+				
+				bool success = send_request(sendToServer);
+				
+				//break if an error occurred
+				if (!success)
+				{
+					if (debugFlag_)
+					{
+						cout << "[DEBUG] send_request() was not successful." << endl;
+					}
+					continue;
+				}
+				  
+				// get a response
+				string response = get_response();
+				
+				if (debugFlag_)
+				{
+					cout << "[DEBUG] server response is: \n" << response << endl;
+				}	
+				
+				// break if an error occurred
+				if (response.empty())
+				{
+					if (debugFlag_)
+					{
+						cout << "[DEBUG] get_response() was not successful." << endl;
+					}
+					continue;
+				}
+				
+				if (response != "OK\n")
+				{
+					cout << response;
+				}
+				break;
+			}
         	
         	case 2:			// list
+        	{
         		if (debugFlag_)
+        		{
         			cout << "[DEBUG] The user requested the list of messages for a user." << endl;
+        		}
+        			
+        		sendToServer = processCommand(commandNum, commandMessage, message);
+				if (debugFlag_)
+				{
+					cout << "[DEBUG] sendToServer: " << sendToServer << endl;
+				}
+				bool success = send_request(sendToServer);
+				//break if an error occurred
+				if (!success)
+				{
+					if (debugFlag_)
+					{
+						cout << "[DEBUG] send_request() was not successful." << endl;
+					}
+					continue;
+				}
+				  
+				// get a response
+				string response = get_response();
+				if (debugFlag_)
+				{
+					cout << "[DEBUG] server response is: \n" << response << endl;
+				}	
+				// break if an error occurred
+				if (response.empty())
+				{
+					if (debugFlag_)
+					{
+						cout << "[DEBUG] get_response() was not successful." << endl;
+					}
+					continue;
+				}
+				
+				int numItems = 0;
+				int index = 0;
+				string fWord = "";
+				stringstream rs(response);
+				rs >> fWord >> numItems;
+				
+				if (fWord == "error")
+				{
+					cout << response;
+					break;
+				}
+				
+				for (index = 0; index < numItems; index++)
+				{
+					response += get_response();
+				}
+				cout << response;
         		break;	
+        	}
 
         	case 3:			// read
+        	{
         		if (debugFlag_)
+        		{
         			cout << "[DEBUG] The user requested to read a message for a user." << endl;
+        		}
+        			
+        		sendToServer = processCommand(commandNum, commandMessage, message);
+				if (debugFlag_)
+				{
+					cout << "[DEBUG] sendToServer: " << sendToServer << endl;
+				}
+				bool success = send_request(sendToServer);
+				//break if an error occurred
+				if (!success)
+				{
+					if (debugFlag_)
+					{
+						cout << "[DEBUG] send_request() was not successful." << endl;
+					}
+					continue;
+				}
+				  
+				// get a response
+				string response = get_response();
+				if (debugFlag_)
+				{
+					cout << "[DEBUG] server response is: \n" << response << endl;
+				}	
+				// break if an error occurred
+				if (response.empty())
+				{
+					if (debugFlag_)
+					{
+						cout << "[DEBUG] get_response() was not successful." << endl;
+					}
+					continue;
+				}
+				
+				int length = 0;
+				string fWord = "";
+				string subject = "";
+				stringstream rstream (response);
+				rstream >> fWord >> subject >> length;
+				
+				if (fWord == "error")
+				{
+					cout << response;
+					break;
+				}
+								
+				response += getMessage(length);		
+				cout << response;
+				//if response doesn't have a newline character at the end, add one on
+				if (response.at(response.length()-1) != '\n')
+				{
+					cout << endl;
+				}
         		break;
+        	}	
         		
 			case 4:			// quit
 				if (debugFlag_)
+				{
 					cout << "[DEBUG] The client will now quit." << endl;
+				}
 				run_ = false;
 				break;
 				
 			default:
 				cout << "That is not a valid command." << endl;
 				if (debugFlag_)
+				{
 					cout << "[DEBUG] The user has typed an invalid command." << endl;
+				}
         
-        }
-        
-        if (commandNum != 4 && commandNum != -1)	// if user wants to quit, or the command is invalid, don't do this stuff
-        {
-        	sendToServer = processCommand(commandNum, commandMessage, message);
-        	if (debugFlag_)
-        		cout << "[DEBUG] sendToServer: " << sendToServer << endl;
-        	bool success = send_request(sendToServer);
-        	
-        	//break if an error occurred
-        	if (!success)
-        	{
-        		if (debugFlag_)
-	        		cout << "[DEBUG] send_request() was not successful." << endl;
-	        	continue;
-	        }
-	        
-	        // get a response
-        	success = get_response();
-        	
-        	// break if an error occurred
-        	if (!success)
-        	{
-        		if (debugFlag_)
-        			cout << "[DEBUG] get_response() was not successful." << endl;
-				continue;
-	        }
         }
     }
     close(server_);
@@ -242,13 +374,13 @@ bool Client::send_request(string request)
 }
 
 
-bool Client::get_response()
+string Client::get_response()
 {
 	string response = cache_;
     // read until we get a newline
     while (response.find("\n") == string::npos)
 	{
-        int nread = recv(client,buf_,1024,0);
+        int nread = recv(server_,buf_,1024,0);
         if (nread < 0)
 		{
             if (errno == EINTR)
@@ -268,18 +400,18 @@ bool Client::get_response()
     }
 	// a better client would cut off anything after the newline and
 	// save it in a cache
-	cache_ = response.substr(request.find("\n")+1);
-	return response.substr(0, request.find("\n"));
+	cache_ = response.substr(response.find("\n")+1);
+	return response.substr(0, response.find("\n")+1);
 }
 
-
-bool Client::get_response()
+string Client::getMessage(int numBytes)
 {
-    string response = "";
-    // read until we get a newline
-    while (response.find("\n") == string::npos)
+	string message = cache_;
+	
+    // read until we get the number of bytes we wanted
+    while (message.length() < numBytes)
 	{
-        int nread = recv(server_,buf_,buflen_,0);
+        int nread = recv(server_,buf_,1024,0);
         if (nread < 0)
 		{
             if (errno == EINTR)
@@ -287,18 +419,25 @@ bool Client::get_response()
                 continue;
             else
                 // an error occurred, so break out
-                return false;
+                return "";
         }
 		else if (nread == 0)
 		{
             // the socket is closed
-            return false;
+            return "";
         }
         // be sure to use append in case we have binary data
-        response.append(buf_,nread);
+        message.append(buf_,nread);
     }
-    // a better client would cut off anything after the newline and
-    // save it in a cache
-    cout << response;
-    return true;
+	
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] getMessage() - state of cache_ before request substring copy: \n" << cache_ << endl;
+	}
+	cache_ = message.substr(numBytes);
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] getMessage() - state of cache_ after request substring copy: \n" << cache_ << endl;
+	}
+    return message.substr(0, numBytes+1);
 }

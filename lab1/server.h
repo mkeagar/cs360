@@ -35,7 +35,6 @@ class Server
 		int server_;
 		int buflen_;
 		string cache_;
-		string errMsg_;
 		char* buf_;
 		bool debugFlag_;
 		

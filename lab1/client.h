@@ -27,7 +27,9 @@ class Client
 		void create();
 		void getInput();
 		bool send_request(string);
-		bool get_response();
+		string get_response();
+		string getMessage(int);
+		string getList(int);
 		int parseCommand(string);
 		string processCommand(int, string, string);
 		

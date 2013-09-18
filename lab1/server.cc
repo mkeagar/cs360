@@ -8,7 +8,6 @@ Server::Server(int port, bool debug)
     buf_ = new char[buflen_+1];
     debugFlag_ = debug;
     cache_ = "";
-    errMsg_ = "";
 
     // create and run the server
     create();
@@ -22,6 +21,10 @@ Server::~Server()
 
 void Server::create()
 {
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] Creating server..." << endl;
+	}
     struct sockaddr_in server_addr;
 
     // setup socket address structure
@@ -69,6 +72,10 @@ void Server::create()
 
 void Server::serve()
 {
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] Server preparing to serve..." << endl;
+	}
     // setup client
     int client = 0;
     struct sockaddr_in client_addr;
@@ -77,17 +84,18 @@ void Server::serve()
       // accept clients
     while ((client = accept(server_,(struct sockaddr *)&client_addr,&clientlen)) > 0)
 	{
-
         handle(client);
         close(client);
     }
-    
     close(server_);
-
 }
 
 void Server::handle(int client)
 {
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] entering handle() method" << endl;
+	}
 	string response = ""; 
     // loop to handle all requests
     while (1)
@@ -97,10 +105,6 @@ void Server::handle(int client)
 		
         // get a request
         string request = get_request(client);
-		if (debugFlag_)
-		{
-			cout << "[DEBUG] Received request: " << request << endl;
-		}
         // break if client is done or an error occurred
         if (request.empty())
             break;
@@ -135,8 +139,9 @@ void Server::handle(int client)
 						
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())               //We didn't find user in the postoffice
+						{
 							postoffice[user] = vector<Message>();
-				
+						}
 						postoffice[user].push_back(Message(subject, message));
 						response = "OK\n";	
 					}
@@ -152,7 +157,9 @@ void Server::handle(int client)
     		case 2:		// "list" command, so tell them what's in the postoffice
     		{
     			if (debugFlag_)
+    			{
         			cout << "[DEBUG] RECEIVED CLIENT REQUEST -> list" << endl;
+        		}
         			
         		string command = "";
 				string user = "";
@@ -163,17 +170,20 @@ void Server::handle(int client)
 				{
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())
+						{
 							rs << "list 0\n";
+						}	
 						else
 						{
 							rs << "list " << postoffice[user].size() << "\n";
 							
 							int i = 0;
 							for (i = 0; i < postoffice[user].size(); i++)
+							{
 								rs << (i+1) << " " << postoffice[user].at(i).sub << "\n";
-							
+							}
 						}
-						
+
 						response = rs.str();
 						
 						if (debugFlag_)
@@ -182,8 +192,9 @@ void Server::handle(int client)
 						}
 				}
 				else
+				{
 					response = "error INVALID LIST REQUEST\n";
-        			
+        		}	
     			break;
     		}
     			
@@ -203,11 +214,11 @@ void Server::handle(int client)
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())
 						{
-							rs << "error USER NOT FOUND\n";
+							rs << "error USER \"" << user << "\" NOT FOUND\n";
 						}
 						else if (postoffice[user].size() < index || index <= 0)
 						{
-							rs << "error NO MESSAGE AT INDEX\n";
+							rs << "error NO MESSAGE AT INDEX " << index << endl;
 						}
 						else
 						{
@@ -216,7 +227,9 @@ void Server::handle(int client)
 						response = rs.str();
 				}
 				else
+				{
 					response = "error INVALID GET REQUEST\n";
+        		}
         			
     			break;
 			}
@@ -236,8 +249,7 @@ void Server::handle(int client)
 				response = "error SERVER ERROR\n";
 				break;
         }
-        
-		
+
 		// send response
 		bool success = send_response(client,response);
 		
@@ -253,6 +265,10 @@ void Server::handle(int client)
 
 int Server::parseCommand(string commandMessage)
 {
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] processing parseCommand()" << endl;
+	}
 	stringstream ss (commandMessage);
 	string command = "";
 	ss >> command;
@@ -271,8 +287,12 @@ int Server::parseCommand(string commandMessage)
 
 string Server::getMessage(int client, int numBytes)
 {
-	string request = cache_;
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] processing getMessage()" << endl;
+	}
 	
+	string request = cache_;
     // read until we get the number of bytes we wanted
     while (request.length() < numBytes)
 	{
@@ -294,22 +314,16 @@ string Server::getMessage(int client, int numBytes)
         // be sure to use append in case we have binary data
         request.append(buf_,nread);
     }
-	
-	if (debugFlag_)
-	{
-		cout << "[DEBUG] getMessage() - state of cache_ before request substring copy: \n" << cache_ << endl;
-		cout << "bytes: " << numBytes << " length: " << request.length() << endl;
-	}
 	cache_ = request.substr(numBytes);
-	if (debugFlag_)
-	{
-		cout << "[DEBUG] getMessage() - state of cache_ after request substring copy: \n" << cache_ << endl;
-	}
     return request.substr(0, numBytes);
 }
 
 string Server::get_request(int client)
 {
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] processing get_request()" << endl;
+	}
     string request = cache_;
     // read until we get a newline
     while (request.find("\n") == string::npos)
@@ -340,6 +354,10 @@ string Server::get_request(int client)
 
 bool Server::send_response(int client, string response)
 {
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] processing send_response()" << endl;
+	}
     // prepare to send response
     const char* ptr = response.c_str();
     int nleft = response.length();
