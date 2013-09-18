@@ -60,6 +60,11 @@ void Server::create()
         perror("listen");
         exit(-1);
     }
+    
+    char host_[128] = "";
+    gethostname(host_, sizeof(host_));
+    
+    cout << "Server running on " << host_ << "\nServer listening on port " << port_ << endl;
 }
 
 void Server::serve()
@@ -91,7 +96,11 @@ void Server::handle(int client)
 		response = "";
 		
         // get a request
-        string request = get_request(client);    
+        string request = get_request(client);
+		if (debugFlag_)
+		{
+			cout << "[DEBUG] Received request: " << request << endl;
+		}
         // break if client is done or an error occurred
         if (request.empty())
             break;
@@ -118,6 +127,12 @@ void Server::handle(int client)
 					if (length > 0)
 					{
 						message = getMessage(client, length);
+						
+						if (debugFlag_)
+						{
+							cout << "[DEBUG] Message is: " << message << endl;
+						}
+						
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())               //We didn't find user in the postoffice
 							postoffice[user] = vector<Message>();
@@ -155,9 +170,15 @@ void Server::handle(int client)
 							
 							int i = 0;
 							for (i = 0; i < postoffice[user].size(); i++)
-								rs << (i) << " " << postoffice[user].at(i).sub << "\n";
+								rs << (i+1) << " " << postoffice[user].at(i).sub << "\n";
 							
-							response = rs.str();
+						}
+						
+						response = rs.str();
+						
+						if (debugFlag_)
+						{
+							cout << "[DEBUG] Sending Response: \n" << response << "[DEBUG] End response" << endl;
 						}
 				}
 				else
@@ -181,16 +202,18 @@ void Server::handle(int client)
 				{
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())
+						{
 							rs << "error USER NOT FOUND\n";
-						else if (postoffice[user].size() < index || index < 0)
+						}
+						else if (postoffice[user].size() < index || index <= 0)
 						{
 							rs << "error NO MESSAGE AT INDEX\n";
 						}
 						else
 						{
-							rs << "message " << postoffice[user].at(index).sub << " "  << postoffice[user].at(index).msg.length() << "\n" << postoffice[user].at(index).msg;							
-							response = rs.str();
+							rs << "message " << postoffice[user].at(index-1).sub << " "  << postoffice[user].at(index-1).msg.length() << "\n" << postoffice[user].at(index-1).msg;
 						}
+						response = rs.str();
 				}
 				else
 					response = "error INVALID GET REQUEST\n";
@@ -206,6 +229,11 @@ void Server::handle(int client)
 				break;
 				
 			default:	// default behavior!
+				if (debugFlag_)
+				{
+					cout << "[DEBUG] There was an error! You should not see this message!" << endl;
+				}
+				response = "error SERVER ERROR\n";
 				break;
         }
         
@@ -245,7 +273,7 @@ string Server::getMessage(int client, int numBytes)
 {
 	string request = cache_;
 	
-    // read until we get a newline
+    // read until we get the number of bytes we wanted
     while (request.length() < numBytes)
 	{
         int nread = recv(client,buf_,1024,0);
@@ -266,11 +294,17 @@ string Server::getMessage(int client, int numBytes)
         // be sure to use append in case we have binary data
         request.append(buf_,nread);
     }
-    // a better server would cut off anything after the newline and
-    // save it in a cache
-	if (numBytes < request.length())	
-		cache_ = request.substr(numBytes);
 	
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] getMessage() - state of cache_ before request substring copy: \n" << cache_ << endl;
+		cout << "bytes: " << numBytes << " length: " << request.length() << endl;
+	}
+	cache_ = request.substr(numBytes);
+	if (debugFlag_)
+	{
+		cout << "[DEBUG] getMessage() - state of cache_ after request substring copy: \n" << cache_ << endl;
+	}
     return request.substr(0, numBytes);
 }
 

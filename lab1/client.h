@@ -33,6 +33,7 @@ class Client
 		
 		int port_;
 		string host_;
+		string cache_;
 		int server_;
 		int buflen_;
 		char* buf_;

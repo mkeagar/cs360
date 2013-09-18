@@ -241,6 +241,38 @@ bool Client::send_request(string request)
     return true;
 }
 
+
+bool Client::get_response()
+{
+	string response = cache_;
+    // read until we get a newline
+    while (response.find("\n") == string::npos)
+	{
+        int nread = recv(client,buf_,1024,0);
+        if (nread < 0)
+		{
+            if (errno == EINTR)
+                // the socket call was interrupted -- try again
+                continue;
+            else
+                // an error occurred, so break out
+                return "";
+        }
+		else if (nread == 0)
+		{
+            // the socket is closed
+            return "";
+        }
+        // be sure to use append in case we have binary data
+        response.append(buf_,nread);
+    }
+	// a better client would cut off anything after the newline and
+	// save it in a cache
+	cache_ = response.substr(request.find("\n")+1);
+	return response.substr(0, request.find("\n"));
+}
+
+
 bool Client::get_response()
 {
     string response = "";
