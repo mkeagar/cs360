@@ -195,6 +195,8 @@ void Client::getInput()
 					break;
 				}
 				
+				response = "";
+				
 				for (index = 0; index < numItems; index++)
 				{
 					response += get_response();
@@ -253,6 +255,9 @@ void Client::getInput()
 					cout << response;
 					break;
 				}
+				
+				response = subject;
+				response += "\n";
 								
 				response += getMessage(length);		
 				cout << response;
