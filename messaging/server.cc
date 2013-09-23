@@ -68,6 +68,8 @@ void Server::create()
     gethostname(host_, sizeof(host_));
     
     cout << "Server running on " << host_ << "\nServer listening on port " << port_ << endl;
+    
+    /**** create array of threads ****/
 }
 
 void Server::serve()
@@ -84,10 +86,25 @@ void Server::serve()
       // accept clients
     while ((client = accept(server_,(struct sockaddr *)&client_addr,&clientlen)) > 0)
 	{
-        handle(client);
-        close(client);
+		// get queue lock
+		// put client in queue
+		// signal queue lock
+		/**** signal queue counting semaphore ****/	
     }
     close(server_);
+}
+
+void Server::threadCommander()
+{
+	while (true)
+	{
+		// wait on queue counting semaphore
+		// wait on queue lock
+		// get the client int out of the queue
+		// signal the queue lock
+		handle(client);
+		close(client)
+	}
 }
 
 void Server::handle(int client)
@@ -98,7 +115,7 @@ void Server::handle(int client)
 	}
 	string response = ""; 
     // loop to handle all requests
-    while (1)
+    while (true)
 	{
 		//empty the response string
 		response = "";

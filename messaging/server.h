@@ -6,12 +6,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <map>
 #include <vector>
+#include <queueu>
 
 using namespace std;
 
