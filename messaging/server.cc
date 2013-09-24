@@ -1,13 +1,13 @@
 #include "server.h"
+void threadCommander(void* input);
 
 Server::Server(int port, bool debug)
 {
     // setup variables
     port_ = port;
     buflen_ = 1024;
-    buf_ = new char[buflen_+1];
+    threadCount_ = 10;
     debugFlag_ = debug;
-    cache_ = "";
 
     // create and run the server
     create();
@@ -79,13 +79,14 @@ void Server::serve()
 		cout << "[DEBUG] Server preparing to serve..." << endl;
 	}
     // setup client
-    int client = 0;
+    int client = 0;void threadCommander(void* input)
     struct sockaddr_in client_addr;
     socklen_t clientlen = sizeof(client_addr);
 
       // accept clients
     while ((client = accept(server_,(struct sockaddr *)&client_addr,&clientlen)) > 0)
 	{
+		// wait queue empty
 		// get queue lock
 		// put client in queue
 		// signal queue lock
@@ -94,14 +95,18 @@ void Server::serve()
     close(server_);
 }
 
-void Server::threadCommander()
+void threadCommander(void* input)
 {
+	ThreadData* data;
+	data = (ThreadData*)input;
+	
 	while (true)
 	{
 		// wait on queue counting semaphore
 		// wait on queue lock
 		// get the client int out of the queue
 		// signal the queue lock
+		// signal the queue counting semaphore
 		handle(client);
 		close(client)
 	}
@@ -153,13 +158,14 @@ void Server::handle(int client)
 						{
 							cout << "[DEBUG] Message is: " << message << endl;
 						}
-						
+						// wait on map lock
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())               //We didn't find user in the postoffice
 						{
 							postoffice[user] = vector<Message>();
 						}
 						postoffice[user].push_back(Message(subject, message));
+						// signal map lock
 						response = "OK\n";	
 					}
 					else
@@ -185,6 +191,7 @@ void Server::handle(int client)
 	
 				if (ss >> command >> user)
 				{
+						// wait on map lock
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())
 						{
@@ -200,7 +207,7 @@ void Server::handle(int client)
 								rs << (i+1) << " " << postoffice[user].at(i).sub << "\n";
 							}
 						}
-
+						// signal map lock
 						response = rs.str();
 						
 						if (debugFlag_)
@@ -228,6 +235,7 @@ void Server::handle(int client)
 	
 				if (ss >> command >> user >> index)
 				{
+						//wait on map lock
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())
 						{
@@ -241,6 +249,7 @@ void Server::handle(int client)
 						{
 							rs << "message " << postoffice[user].at(index-1).sub << " "  << postoffice[user].at(index-1).msg.length() << "\n" << postoffice[user].at(index-1).msg;
 						}
+						// signal map lock
 						response = rs.str();
 				}
 				else
@@ -254,7 +263,9 @@ void Server::handle(int client)
 			case 4:		// "reset" command, empty the postoffice
 				if (debugFlag_)
         			cout << "[DEBUG] RECEIVED CLIENT REQUEST -> reset" << endl;
+        		// wait on map lock
 				postoffice.clear();
+				// signal map lock
 				response = "OK\n";
 				break;
 				

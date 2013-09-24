@@ -13,7 +13,9 @@
 #include <sstream>
 #include <map>
 #include <vector>
-#include <queueu>
+#include <queue>
+
+#define BUFFLEN 1024
 
 using namespace std;
 
@@ -36,9 +38,9 @@ class Server
 		int port_;
 		int server_;
 		int buflen_;
-		string cache_;
-		char* buf_;
+		int threadCount_;
 		bool debugFlag_;
+		queue<int> cliQue_
 		
 
 		//	Message class for storing messages
@@ -57,4 +59,26 @@ class Server
 
 		// map to store the messages on the server
 		map<string, vector<Message> > postoffice;
+		
+		// Class for storing thread cache and buffer
+		class ThreadData
+		{
+			public:
+				ThreadData(Server serv)
+				{
+					this->cache = "";
+					this->buffer = new char[BUFFLEN + 1];
+					this->server_ = serv;
+				};
+				
+				~ThreadData()
+				{
+					delete this->buffer;
+				}
+			
+			int client;
+			string cache;
+			char* buffer;
+			Server server;
+		};
 };
