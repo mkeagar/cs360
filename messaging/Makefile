@@ -5,7 +5,7 @@ MSGD=		msgd.o server.o
 MSG=		msg.o client.o
 OBJS =			$(MSGD) $(MSG) 
 
-LIBS=
+LIBS= -pthread
 
 CCFLAGS= -g
 

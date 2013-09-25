@@ -1,5 +1,15 @@
 #include "server.h"
-void threadCommander(void* input);
+
+void* threadCommander(void* input);
+
+// structure to hold data passed to a thread
+typedef struct threadData_
+{	
+	Server* server;
+    int client;
+  	char* buffer;
+  	string cache;   
+} threadData;
 
 Server::Server(int port, bool debug)
 {
@@ -14,10 +24,7 @@ Server::Server(int port, bool debug)
     serve();
 }
 
-Server::~Server()
-{
-    delete buf_;
-}
+Server::~Server(){}
 
 void Server::create()
 {
@@ -70,6 +77,17 @@ void Server::create()
     cout << "Server running on " << host_ << "\nServer listening on port " << port_ << endl;
     
     /**** create array of threads ****/
+    int i = 0;
+    for (i = 0; i < threadCount_; i++)
+    {
+    	threadData* data = new threadData;
+    	data->server = this;
+    	data->buffer = new char[buflen_+1];
+    	data->cache = "";
+    	
+    	pthread_t* thread = new pthread_t;
+    	pthread_create(thread, NULL, &threadCommander, (void*) data);
+    }
 }
 
 void Server::serve()
@@ -79,7 +97,7 @@ void Server::serve()
 		cout << "[DEBUG] Server preparing to serve..." << endl;
 	}
     // setup client
-    int client = 0;void threadCommander(void* input)
+    int client = 0;
     struct sockaddr_in client_addr;
     socklen_t clientlen = sizeof(client_addr);
 
@@ -95,10 +113,10 @@ void Server::serve()
     close(server_);
 }
 
-void threadCommander(void* input)
+void* threadCommander(void* input)
 {
-	ThreadData* data;
-	data = (ThreadData*)input;
+	threadData* data;
+	data = (threadData*) input;
 	
 	while (true)
 	{
@@ -107,12 +125,12 @@ void threadCommander(void* input)
 		// get the client int out of the queue
 		// signal the queue lock
 		// signal the queue counting semaphore
-		handle(client);
-		close(client)
+		data->server->handle(data->client, data->cache, data->buffer);
+		close(data->client);
 	}
 }
 
-void Server::handle(int client)
+void Server::handle(int client, string& cache, char* buffer)
 {
 	if (debugFlag_)
 	{
@@ -126,7 +144,7 @@ void Server::handle(int client)
 		response = "";
 		
         // get a request
-        string request = get_request(client);
+        string request = get_request(client, cache, buffer);
         // break if client is done or an error occurred
         if (request.empty())
             break;
@@ -152,7 +170,7 @@ void Server::handle(int client)
 				{
 					if (length > 0)
 					{
-						message = getMessage(client, length);
+						message = getMessage(client, length, cache, buffer);
 						
 						if (debugFlag_)
 						{
@@ -313,18 +331,18 @@ int Server::parseCommand(string commandMessage)
 		return -1;
 }
 
-string Server::getMessage(int client, int numBytes)
+string Server::getMessage(int client, int numBytes, string& cache, char* buffer)
 {
 	if (debugFlag_)
 	{
 		cout << "[DEBUG] processing getMessage()" << endl;
 	}
 	
-	string request = cache_;
+	string request = cache;
     // read until we get the number of bytes we wanted
     while (request.length() < numBytes)
 	{
-        int nread = recv(client,buf_,1024,0);
+        int nread = recv(client,buffer,buflen_,0);
         if (nread < 0)
 		{
             if (errno == EINTR)
@@ -340,23 +358,23 @@ string Server::getMessage(int client, int numBytes)
             return "";
         }
         // be sure to use append in case we have binary data
-        request.append(buf_,nread);
+        request.append(buffer,nread);
     }
-	cache_ = request.substr(numBytes);
+	cache = request.substr(numBytes);
     return request.substr(0, numBytes);
 }
 
-string Server::get_request(int client)
+string Server::get_request(int client, string& cache, char* buffer)
 {
 	if (debugFlag_)
 	{
 		cout << "[DEBUG] processing get_request()" << endl;
 	}
-    string request = cache_;
+    string request = cache;
     // read until we get a newline
     while (request.find("\n") == string::npos)
 	{
-        int nread = recv(client,buf_,1024,0);
+        int nread = recv(client,buffer,buflen_,0);
         if (nread < 0)
 		{
             if (errno == EINTR)
@@ -372,11 +390,11 @@ string Server::get_request(int client)
             return "";
         }
         // be sure to use append in case we have binary data
-        request.append(buf_,nread);
+        request.append(buffer,nread);
     }
     // a better server would cut off anything after the newline and
     // save it in a cache
-	cache_ = request.substr(request.find("\n")+1);
+	cache = request.substr(request.find("\n")+1);
     return request.substr(0, request.find("\n"));
 }
 

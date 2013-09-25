@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <semaphore.h>
+#include <pthread.h>
 
 #include <string>
 #include <iostream>
@@ -16,6 +17,7 @@
 #include <queue>
 
 #define BUFFLEN 1024
+#define NUM_THREADS
 
 using namespace std;
 
@@ -24,15 +26,22 @@ class Server
 	public:
 		Server(int, bool);
 		~Server();
+		
+		void handle(int, string&, char*);
+		
+		queue<int> cliQue_;
+		sem_t emptyQSlot_;
+		sem_t filledQSlot_;
+		sem_t queueLock_;
+		sem_t poLock_;
 
 	private:
 
 		void create();
 		void serve();
-		void handle(int);
 		int parseCommand(string);
-		string getMessage(int, int);
-		string get_request(int);
+		string getMessage(int, int, string&, char*);
+		string get_request(int, string&, char*);
 		bool send_response(int, string);
 
 		int port_;
@@ -40,8 +49,6 @@ class Server
 		int buflen_;
 		int threadCount_;
 		bool debugFlag_;
-		queue<int> cliQue_
-		
 
 		//	Message class for storing messages
     	class Message
@@ -59,26 +66,4 @@ class Server
 
 		// map to store the messages on the server
 		map<string, vector<Message> > postoffice;
-		
-		// Class for storing thread cache and buffer
-		class ThreadData
-		{
-			public:
-				ThreadData(Server serv)
-				{
-					this->cache = "";
-					this->buffer = new char[BUFFLEN + 1];
-					this->server_ = serv;
-				};
-				
-				~ThreadData()
-				{
-					delete this->buffer;
-				}
-			
-			int client;
-			string cache;
-			char* buffer;
-			Server server;
-		};
 };
