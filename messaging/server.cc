@@ -1,14 +1,21 @@
 #include "server.h"
 
-void* threadCommander(void* input);
+void* threadCommander(void*);
 
 // structure to hold data passed to a thread
 typedef struct threadData_
 {	
 	Server* server;
+	int threadID;
     int client;
   	char* buffer;
-  	string cache;   
+  	string cache;  
+  	sem_t* emptyQSlot;
+	sem_t* filledQSlot;
+	sem_t* queueLock;
+	sem_t* poLock;
+	queue<int>* cliQue;
+  	 
 } threadData;
 
 Server::Server(int port, bool debug)
@@ -17,6 +24,7 @@ Server::Server(int port, bool debug)
     port_ = port;
     buflen_ = 1024;
     threadCount_ = 10;
+    maxQueueSize_ = 100;
     debugFlag_ = debug;
 
     // create and run the server
@@ -24,7 +32,14 @@ Server::Server(int port, bool debug)
     serve();
 }
 
-Server::~Server(){}
+Server::~Server()
+{
+	int i = 0;
+	for (i = 0; i < threadCount_; i++)
+	{
+		delete threads_[i];
+	}
+}
 
 void Server::create()
 {
@@ -71,6 +86,12 @@ void Server::create()
         exit(-1);
     }
     
+    // create semaphores
+    sem_init(&emptyQSlot_, 0, maxQueueSize_);
+    sem_init(&filledQSlot_, 0, 0);
+    sem_init(&queueLock_, 0, 1);
+    sem_init(&poLock_, 0, 1);
+    
     char host_[128] = "";
     gethostname(host_, sizeof(host_));
     
@@ -82,10 +103,17 @@ void Server::create()
     {
     	threadData* data = new threadData;
     	data->server = this;
+    	data->threadID = i+1;
     	data->buffer = new char[buflen_+1];
     	data->cache = "";
+    	data->emptyQSlot = &emptyQSlot_;
+    	data->filledQSlot = &filledQSlot_;
+    	data->queueLock = &queueLock_;
+    	data->poLock = &poLock_;
+    	data->cliQue = &cliQue_;
     	
     	pthread_t* thread = new pthread_t;
+    	threads_.push_back(thread);
     	pthread_create(thread, NULL, &threadCommander, (void*) data);
     }
 }
@@ -97,18 +125,18 @@ void Server::serve()
 		cout << "[DEBUG] Server preparing to serve..." << endl;
 	}
     // setup client
-    int client = 0;
+    int client;
     struct sockaddr_in client_addr;
     socklen_t clientlen = sizeof(client_addr);
 
       // accept clients
     while ((client = accept(server_,(struct sockaddr *)&client_addr,&clientlen)) > 0)
 	{
-		// wait queue empty
-		// get queue lock
-		// put client in queue
-		// signal queue lock
-		/**** signal queue counting semaphore ****/	
+		sem_wait(&emptyQSlot_);
+		sem_wait(&queueLock_);
+		cliQue_.push(client);
+		sem_post(&queueLock_);
+		sem_post(&filledQSlot_);
     }
     close(server_);
 }
@@ -120,13 +148,17 @@ void* threadCommander(void* input)
 	
 	while (true)
 	{
-		// wait on queue counting semaphore
-		// wait on queue lock
-		// get the client int out of the queue
-		// signal the queue lock
-		// signal the queue counting semaphore
+		sem_wait(data->filledQSlot);
+		cout << data->threadID << ": Finished waiting for Filled Slot" << endl;
+		sem_wait(data->queueLock);
+		cout << data->threadID << ": Finished waiting for Queue Lock" << endl;
+		data->client = data->cliQue->front();
+		data->cliQue->pop();
+		sem_post(data->queueLock);
+		sem_post(data->emptyQSlot);
 		data->server->handle(data->client, data->cache, data->buffer);
 		close(data->client);
+		cout << data->threadID << ": Closed client" << endl;
 	}
 }
 
@@ -176,14 +208,18 @@ void Server::handle(int client, string& cache, char* buffer)
 						{
 							cout << "[DEBUG] Message is: " << message << endl;
 						}
-						// wait on map lock
+						// wait on post office lock
+						sem_wait(&poLock_);
+						
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())               //We didn't find user in the postoffice
 						{
 							postoffice[user] = vector<Message>();
 						}
 						postoffice[user].push_back(Message(subject, message));
-						// signal map lock
+						// signal post office lock
+						sem_post(&poLock_);
+						
 						response = "OK\n";	
 					}
 					else
@@ -209,7 +245,9 @@ void Server::handle(int client, string& cache, char* buffer)
 	
 				if (ss >> command >> user)
 				{
-						// wait on map lock
+						// wait on post office lock
+						sem_wait(&poLock_);
+						
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())
 						{
@@ -225,7 +263,9 @@ void Server::handle(int client, string& cache, char* buffer)
 								rs << (i+1) << " " << postoffice[user].at(i).sub << "\n";
 							}
 						}
-						// signal map lock
+						// signal post office lock
+						sem_post(&poLock_);
+						
 						response = rs.str();
 						
 						if (debugFlag_)
@@ -253,7 +293,9 @@ void Server::handle(int client, string& cache, char* buffer)
 	
 				if (ss >> command >> user >> index)
 				{
-						//wait on map lock
+						//wait on post office lock
+						sem_wait(&poLock_);
+						
 						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
 						if (itr == postoffice.end())
 						{
@@ -267,7 +309,9 @@ void Server::handle(int client, string& cache, char* buffer)
 						{
 							rs << "message " << postoffice[user].at(index-1).sub << " "  << postoffice[user].at(index-1).msg.length() << "\n" << postoffice[user].at(index-1).msg;
 						}
-						// signal map lock
+						// signal post office lock
+						sem_post(&poLock_);
+						
 						response = rs.str();
 				}
 				else
@@ -281,9 +325,14 @@ void Server::handle(int client, string& cache, char* buffer)
 			case 4:		// "reset" command, empty the postoffice
 				if (debugFlag_)
         			cout << "[DEBUG] RECEIVED CLIENT REQUEST -> reset" << endl;
-        		// wait on map lock
+        		// wait on post office lock
+        		sem_wait(&poLock_);
+        		
 				postoffice.clear();
+				
 				// signal map lock
+				sem_post(&poLock_);
+				
 				response = "OK\n";
 				break;
 				

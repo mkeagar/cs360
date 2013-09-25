@@ -16,9 +16,6 @@
 #include <vector>
 #include <queue>
 
-#define BUFFLEN 1024
-#define NUM_THREADS
-
 using namespace std;
 
 class Server
@@ -28,12 +25,6 @@ class Server
 		~Server();
 		
 		void handle(int, string&, char*);
-		
-		queue<int> cliQue_;
-		sem_t emptyQSlot_;
-		sem_t filledQSlot_;
-		sem_t queueLock_;
-		sem_t poLock_;
 
 	private:
 
@@ -48,7 +39,14 @@ class Server
 		int server_;
 		int buflen_;
 		int threadCount_;
+		int maxQueueSize_;
 		bool debugFlag_;
+		vector<pthread_t*> threads_;
+		queue<int> cliQue_;
+		sem_t emptyQSlot_;
+		sem_t filledQSlot_;
+		sem_t queueLock_;
+		sem_t poLock_;
 
 		//	Message class for storing messages
     	class Message
