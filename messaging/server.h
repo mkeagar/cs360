@@ -65,5 +65,5 @@ class Server
     	};
 
 		// map to store the messages on the server
-		map<string, vector<Message> > postoffice;
+		map<string, vector<Message> > postoffice_;
 };

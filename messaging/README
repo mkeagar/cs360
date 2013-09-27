@@ -1,0 +1,40 @@
+Mike Eagar
+CS 360
+Lab 2 Report README file
+
+The shared data structures where I used synchronization in the lab were (1) a Map to store Message objects, and (2) a queue to keep the clients while they wait for a free thread.
+	(1) Message Map - called postoffice_ - stores messages with the user the message is sent to as the key, and a vector of Message objects as the value.
+		The map is set up in server.h on line 68 and it is used in server.cc on lines 227-232, 265-277, 313-324, and 345.
+		
+	(2) Queue of int - called cliQue_ (for Client Queue) - stores an int for every client who is still waiting for an available thread.  (Note: In each thread's personal data structure (called data, or threadData), the queue is just called cliQue with no underscore.)
+		The queue is set up in server.h on line 47, and a reference to it in the threadData_ struct on line 17.  It is used/accessed/referenced in server.cc on lines 122, 147, and 163-164.
+		
+	
+I created four semaphores for shared use between the server and its threads:
+
+	(1) emptyQSlot_ - called emptyQSlot within the threads' data structures - This semaphore is initialized at maxQueueSize_ (currently 100 in my code) to keep track of how many empty slots are available in the queue
+		Behavior:
+			sem_wait(): decrements to show one less empty slot is available for a client to occupy
+			sem_post(): increments to show one more slot has become available
+		Used/Referenced in server.cc on lines 14, 99, 119, 145, and 166
+	
+	(2) filledQSlot_ - called filledQSlot within the threads' data structures - This semaphore is initialized at 0 to keep track of how many clients are occupying the queue and waiting for a worker thread.
+		Behavior:
+			sem_wait(): decrements to show one less client is occupying the queue
+			sem_post(): increments to show another client has connected and is waiting for a thread
+		Used/Referenced in server.cc on lines 15, 100, 120, 149, and 161
+	
+	(3) queueLock_ - called queueLock within the threads' data structures - This semaphore is initialized at 1 as it is a locking semaphore
+		Behavior:
+			sem_wait(): decrements to 0 to show that a thread currently has the lock on the queue, and other threads will have to wait
+			sem_post(): increments to 1 to show that the queue is currently available for access
+		Used/Referenced in server.cc on lines 16, 101, 121, 146, 148, 162, and 165
+	
+	(4) poLock_ - Only referenced by the server itself, as the threads don't need direct access to the postoffice (Message Map). This semaphore is a locking semaphore and is initialized at 1.
+		Behavior:
+			sem_wait(): decrements to 0 to show that the postoffice is currently locked
+			sem_post(): increments to 1 to show that the postoffice is currently available for access
+		Used/Referenced in server.cc on lines 102, 225, 235, 263, 281, 311, 327, 343, and 348
+		
+
+		

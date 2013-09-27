@@ -11,8 +11,8 @@ typedef struct threadData_
   	char* buffer;		// thread's personal buffer
   	bool debugFlag;		// flag to tell threads to print debug statements
   	string cache;  		// thread's personal cache
-  	sem_t* emptyQSlot;	// reference to our Empty slot semaphore
-	sem_t* filledQSlot;	// reference to our filled slot semaphore
+  	sem_t* emptyQSlot;	// reference to our Empty queue slot semaphore
+	sem_t* filledQSlot;	// reference to our filled queue slot semaphore
 	sem_t* queueLock;	// reference to our queue locking semaphore
 	queue<int>* cliQue;	// reference to the client queue
   	 
@@ -224,12 +224,13 @@ void Server::handle(int client, string& cache, char* buffer)
 						// wait on post office lock
 						sem_wait(&poLock_);
 						
-						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
-						if (itr == postoffice.end())               //We didn't find user in the postoffice
+						map<string, vector<Message> >::iterator itr = this->postoffice_.find(user);
+						if (itr == postoffice_.end())               //We didn't find user in the postoffice
 						{
-							postoffice[user] = vector<Message>();
+							postoffice_[user] = vector<Message>();
 						}
-						postoffice[user].push_back(Message(subject, message));
+						postoffice_[user].push_back(Message(subject, message));
+						
 						// signal post office lock
 						sem_post(&poLock_);
 						
@@ -261,19 +262,19 @@ void Server::handle(int client, string& cache, char* buffer)
 						// wait on post office lock
 						sem_wait(&poLock_);
 						
-						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
-						if (itr == postoffice.end())
+						map<string, vector<Message> >::iterator itr = this->postoffice_.find(user);
+						if (itr == postoffice_.end())
 						{
 							rs << "list 0\n";
 						}	
 						else
 						{
-							rs << "list " << postoffice[user].size() << "\n";
+							rs << "list " << postoffice_[user].size() << "\n";
 							
 							int i = 0;
-							for (i = 0; i < postoffice[user].size(); i++)
+							for (i = 0; i < postoffice_[user].size(); i++)
 							{
-								rs << (i+1) << " " << postoffice[user].at(i).sub << "\n";
+								rs << (i+1) << " " << postoffice_[user].at(i).sub << "\n";
 							}
 						}
 						// signal post office lock
@@ -309,18 +310,18 @@ void Server::handle(int client, string& cache, char* buffer)
 						//wait on post office lock
 						sem_wait(&poLock_);
 						
-						map<string, vector<Message> >::iterator itr = this->postoffice.find(user);
-						if (itr == postoffice.end())
+						map<string, vector<Message> >::iterator itr = this->postoffice_.find(user);
+						if (itr == postoffice_.end())
 						{
 							rs << "error USER \"" << user << "\" NOT FOUND\n";
 						}
-						else if (postoffice[user].size() < index || index <= 0)
+						else if (postoffice_[user].size() < index || index <= 0)
 						{
 							rs << "error NO MESSAGE AT INDEX " << index << endl;
 						}
 						else
 						{
-							rs << "message " << postoffice[user].at(index-1).sub << " "  << postoffice[user].at(index-1).msg.length() << "\n" << postoffice[user].at(index-1).msg;
+							rs << "message " << postoffice_[user].at(index-1).sub << " "  << postoffice_[user].at(index-1).msg.length() << "\n" << postoffice_[user].at(index-1).msg;
 						}
 						// signal post office lock
 						sem_post(&poLock_);
@@ -341,7 +342,7 @@ void Server::handle(int client, string& cache, char* buffer)
         		// wait on post office lock
         		sem_wait(&poLock_);
         		
-				postoffice.clear();
+				postoffice_.clear();
 				
 				// signal map lock
 				sem_post(&poLock_);
