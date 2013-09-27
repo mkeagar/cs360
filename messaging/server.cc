@@ -5,16 +5,16 @@ void* threadCommander(void*);
 // structure to hold data passed to a thread
 typedef struct threadData_
 {	
-	Server* server;
-	int threadID;
-    int client;
-  	char* buffer;
-  	string cache;  
-  	sem_t* emptyQSlot;
-	sem_t* filledQSlot;
-	sem_t* queueLock;
-	sem_t* poLock;
-	queue<int>* cliQue;
+	Server* server;		// reference to our server
+	int threadID;		// thread ID
+    int client;			// client ID
+  	char* buffer;		// thread's personal buffer
+  	bool debugFlag;		// flag to tell threads to print debug statements
+  	string cache;  		// thread's personal cache
+  	sem_t* emptyQSlot;	// reference to our Empty slot semaphore
+	sem_t* filledQSlot;	// reference to our filled slot semaphore
+	sem_t* queueLock;	// reference to our queue locking semaphore
+	queue<int>* cliQue;	// reference to the client queue
   	 
 } threadData;
 
@@ -37,7 +37,7 @@ Server::~Server()
 	int i = 0;
 	for (i = 0; i < threadCount_; i++)
 	{
-		delete threads_[i];
+		delete threads_[i];		// let's make sure we delete memory references to all of our threads
 	}
 }
 
@@ -97,19 +97,19 @@ void Server::create()
     
     cout << "Server running on " << host_ << "\nServer listening on port " << port_ << endl;
     
-    /**** create array of threads ****/
+    // create the vector of our 10 worker threads and populate each with their personal data structures
     int i = 0;
     for (i = 0; i < threadCount_; i++)
     {
     	threadData* data = new threadData;
     	data->server = this;
+    	data->debugFlag = debugFlag_;
     	data->threadID = i+1;
     	data->buffer = new char[buflen_+1];
     	data->cache = "";
     	data->emptyQSlot = &emptyQSlot_;
     	data->filledQSlot = &filledQSlot_;
     	data->queueLock = &queueLock_;
-    	data->poLock = &poLock_;
     	data->cliQue = &cliQue_;
     	
     	pthread_t* thread = new pthread_t;
@@ -129,7 +129,7 @@ void Server::serve()
     struct sockaddr_in client_addr;
     socklen_t clientlen = sizeof(client_addr);
 
-      // accept clients
+      // accept clients and push them on the queue, signalling the threads that there is someone here on the queue
     while ((client = accept(server_,(struct sockaddr *)&client_addr,&clientlen)) > 0)
 	{
 		sem_wait(&emptyQSlot_);
@@ -149,16 +149,19 @@ void* threadCommander(void* input)
 	while (true)
 	{
 		sem_wait(data->filledQSlot);
-		cout << data->threadID << ": Finished waiting for Filled Slot" << endl;
 		sem_wait(data->queueLock);
-		cout << data->threadID << ": Finished waiting for Queue Lock" << endl;
 		data->client = data->cliQue->front();
 		data->cliQue->pop();
 		sem_post(data->queueLock);
 		sem_post(data->emptyQSlot);
+		
+		if (data->debugFlag)
+			cout << "Thread " << data->threadID << ": Handling client #" << data->client << endl;
 		data->server->handle(data->client, data->cache, data->buffer);
+		
 		close(data->client);
-		cout << data->threadID << ": Closed client" << endl;
+		if (data->debugFlag)
+			cout << "Thread " << data->threadID << ": Closed client #" << data->client << endl;
 	}
 }
 
