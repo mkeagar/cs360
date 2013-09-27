@@ -39,9 +39,11 @@ class Server
 		int server_;
 		int buflen_;
 		int threadCount_;
+		int	threadsDatasCount_;
 		int maxQueueSize_;
 		bool debugFlag_;
 		vector<pthread_t*> threads_;
+		vector<void*> threadsDatas_;
 		queue<int> cliQue_;
 		sem_t emptyQSlot_;
 		sem_t filledQSlot_;

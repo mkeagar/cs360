@@ -24,6 +24,7 @@ Server::Server(int port, bool debug)
     port_ = port;
     buflen_ = 1024;
     threadCount_ = 10;
+    threadsDatasCount_ = 10;
     maxQueueSize_ = 100;
     debugFlag_ = debug;
 
@@ -35,10 +36,18 @@ Server::Server(int port, bool debug)
 Server::~Server()
 {
 	int i = 0;
+	
 	for (i = 0; i < threadCount_; i++)
 	{
 		delete threads_[i];		// let's make sure we delete memory references to all of our threads
 	}
+	
+	for (i = 0; i < threadsDatasCount_; i++)
+	{
+		delete (((threadData_*) threadsDatas_[i])->buffer);
+		delete ((threadData_*) threadsDatas_[i]);
+	}
+	
 }
 
 void Server::create()
@@ -114,6 +123,7 @@ void Server::create()
     	
     	pthread_t* thread = new pthread_t;
     	threads_.push_back(thread);
+    	threadsDatas_.push_back(data);
     	pthread_create(thread, NULL, &threadCommander, (void*) data);
     }
 }
