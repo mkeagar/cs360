@@ -46,10 +46,10 @@ class DownloadAccelerator:
 			message = "Content length not provided, using only 1 thread."
 			print message
 		else:
-			partSize = r.headers['content-length'] / self.numThreads
+			partSize = int(r.headers['content-length']) / self.numThreads
 			
 		if not startByte == -1:
-			endByte = startByte + partsize
+			endByte = startByte + partSize
 		
 		# create our thread array with the number of threads specified.
 		threads = []
@@ -84,7 +84,7 @@ class DownThread(threading.Thread):
 		if self.startByte == -1:
 			r = requests.get(self.url, stream=True, headers={'accept-encoding':''})
 		else:
-			r = requestes.get(self.url, stream=True, headers={'accept-encoding':'', 'range':self.startByte + '-' + self.endByte})
+			r = requests.get(self.url, stream=True, headers={'accept-encoding':'', 'range':'bytes='+str(self.startByte) + '-' + str(self.endByte)})
 
 		self.content = r.content
 
