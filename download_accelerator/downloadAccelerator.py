@@ -2,6 +2,7 @@ import argparse
 import os
 import requests
 import threading
+import time
 
 ''' CS 360 - Fall 2013 - Lab 2 - Download Accelerator - will download a specified URL using a specified number of threads, or a default number of threads. '''
 class DownloadAccelerator:
@@ -22,7 +23,6 @@ class DownloadAccelerator:
 	def download(self):
 		''' Download the file specified by the URL using the specified number of threads, or one thread if no number was specified.'''
 		# append "index.html" if needed.
-		message = ""
 		suffix = "/"
 		if self.url.endswith(suffix):
 			self.url += 'index.html'
@@ -30,8 +30,8 @@ class DownloadAccelerator:
 		# setup download location and size variables for dividing the data among our threads
 		output = self.url.split('/')[-1].strip()
 		partSize = 0
-		message = "Attempting to download " + output + "from URL: " + self.url + " using " + str(self.numThreads) + " threads."
-		print message
+		
+		timeStart = time.time() # The time we start trying to get the file
 		r = requests.head(self.url)
 		
 		startByte = 0;
@@ -43,8 +43,6 @@ class DownloadAccelerator:
 			startByte = -1
 			endByte = -1
 			partSize = -1
-			message = "Content length not provided, using only 1 thread."
-			print message
 		else:
 			partSize = int(r.headers['content-length']) / self.numThreads
 			
@@ -54,6 +52,8 @@ class DownloadAccelerator:
 		# create our thread array with the number of threads specified.
 		threads = []
 		for i in range(0,self.numThreads):
+			if i == self.numThreads-1 and r.headers['content-length']:
+				endByte = int(r.headers['content-length'])
 			d = DownThread(self.url, startByte, endByte)
 			threads.append(d)
 			startByte = endByte
@@ -69,6 +69,9 @@ class DownloadAccelerator:
 			t.join()
 			f.write(t.content)
 		f.close()
+		timeEnd = time.time() - timeStart
+		statinfo = os.stat(output)
+		print self.url + ' ' + str(self.numThreads) + ' ' + str(statinfo.st_size) + ' ' + str(timeEnd)
 		
 class DownThread(threading.Thread):
 	def __init__(self, url, index1, index2):
