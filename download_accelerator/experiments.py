@@ -9,7 +9,7 @@ urls = [("small","http://ilab.cs.byu.edu/zappala/files/design-philosophy-sigcomm
         ("large","http://ilab.cs.byu.edu/zappala/files/poster.pdf")]
 
 # Number of threads to use
-threads = [1,2,3,4,5,6,7,8,9,10]
+threads = [1,2,3,5,10]
 
 # Number of times to repeat each experiment
 times = 10
