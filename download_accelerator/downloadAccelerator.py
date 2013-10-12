@@ -29,7 +29,6 @@ class DownloadAccelerator:
 		
 		# setup download location and size variables for dividing the data among our threads
 		output = self.url.split('/')[-1].strip()
-		partSize = 0
 		
 		timeStart = time.time() # The time we start trying to get the file
 		r = requests.head(self.url)
