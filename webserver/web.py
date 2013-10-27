@@ -20,7 +20,6 @@ class Main:
 		self.args = parser.parse_args()
 
 	def run(self):
-		print self.args.debug
 		p = Poller(self.args.port, self.args.debug)
 		p.run()
 

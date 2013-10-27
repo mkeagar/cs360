@@ -121,9 +121,12 @@ class Poller:
 	def handleClient(self,fileDesc):
 		data = self.clients[fileDesc].recv(self.size)
 		if data:
+		
+			if self.debug: print "[DATA]\n" + data + "\n"
 			self.clientDatas[fileDesc].cache += data
 			if self.validRequestInCache(fileDesc):
 				requestData = self.removeRequestFromCache(fileDesc)
+				print "[REQUEST DATA]\n" + requestData + "\n"
 				request = HTTPRequest(requestData)
 				
 				if not request.command:
@@ -141,7 +144,9 @@ class Poller:
 					return
 
 				elif request.command == 'GET':
-					host = request.headers['host'][:request.headers['host'].find(":")]
+					if request.headers['host'].find(":"):
+						host = request.headers['host'][:request.headers['host'].find(":")]
+					host = request.headers['host']
 					hostPath = self.hosts[host]
 					
 					if not hostPath:
@@ -173,17 +178,16 @@ class Poller:
 					response = self.create200Response(reqFile)
 					if self.debug:
 						print "*************** Sending Response ***************\n" + response + "File Contentss go here\n ************************************************"
-#					self.clients[fileDesc].send(response)
+					self.clients[fileDesc].send(response)
 										
 					while True:
 						filePiece = reqFile.read(self.size)
 						if filePiece == "":
 							break
 						response += filePiece					
-#						self.clients[fileDesc].send(filePiece)
-					
-					print "Response:\n" + response + "\n\n\n"
-					self.clients[fileDesc].send(response)
+						self.clients[fileDesc].send(filePiece)
+
+#					self.clients[fileDesc].send(response)
 				
 		else:
 			self.poller.unregister(fileDesc)
@@ -193,7 +197,7 @@ class Poller:
 	def create200Response(self, goodFile):
 		ext = goodFile.name.split('.')[-1]
 		if not self.medias[ext]:
-			ext = '.txt'
+			ext = 'txt'
 			
 		conType = self.medias[ext]
 		size = int(os.path.getsize(goodFile.name))
@@ -222,8 +226,8 @@ class Poller:
 	
 	def removeRequestFromCache(self, fileDesc):
 		endIndex = self.clientDatas[fileDesc].cache.find("\r\n\r\n")
-		request = self.clientDatas[fileDesc].cache[:endIndex]
-		self.clientDatas[fileDesc].cach = self.clientDatas[fileDesc].cache[endIndex:]
+		request = self.clientDatas[fileDesc].cache[:endIndex + 4]
+		self.clientDatas[fileDesc].cache = self.clientDatas[fileDesc].cache[endIndex + 4:]
 		return request
 	
 	
