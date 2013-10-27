@@ -96,6 +96,7 @@ class Poller:
 		for fileDesc, client in self.clientDatas.items():
 			if self.clients.get(fileDesc, None):	
 				if time.time() - client.lastUse > self.params['timeout']:
+					self.poller.unregister(fileDesc)
 					self.clients[fileDesc].close()
 					del self.clients[fileDesc]
 					del self.clientDatas[fileDesc]
@@ -127,6 +128,12 @@ class Poller:
 					self.clientDatas[fileDesc].cache += data
 					if self.validRequestInCache(fileDesc):
 						break;
+						
+				else:
+					self.poller.unregister(fileDesc)
+					self.clients[fileDesc].close()
+					del self.clients[fileDesc]
+					del self.clientDatas[fileDesc]		
 					
 			except errno.EAGAIN:
 				if self.debug:
@@ -137,123 +144,121 @@ class Poller:
 					print "[RECV ERROR] Operation would block"
 				continue
 		
-		if data:
-			if self.debug: print "[DATA]\n" + data + "\n"
-			
-			requestData = self.removeRequestFromCache(fileDesc)
+		#if data:
+		if self.debug: print "[DATA]\n" + data + "\n"
+		
+		requestData = self.removeRequestFromCache(fileDesc)
 				
-			if self.debug: print "[REQUEST DATA]\n" + requestData + "\n"
-			request = HTTPRequest(requestData)
-			
-			if not request.command:
-				response = self.create400Response()
-				if self.debug:
-					print "*************** Sending Response ***************\n" + response + "************************************************"
-				while True:
-					try:
-						self.clients[fileDesc].send(response)
-					except errno.EWOULDBLOCK:
-						if self.debug:
-							print "[SEND ERROR] Operation would block"
-						continue
-					
-				return
+		if self.debug: print "[REQUEST DATA]\n" + requestData + "\n"
+		request = HTTPRequest(requestData)
+		
+		if not request.command:
+			response = self.create400Response()
+			if self.debug:
+				print "*************** Sending Response ***************\n" + response + "************************************************"
+			while True:
+				try:
+					self.clients[fileDesc].send(response)
+				except errno.EWOULDBLOCK:
+					if self.debug:
+						print "[SEND ERROR - 400 Bad Request] Operation would block"
+					continue
 				
-			elif request.command != 'GET':
-				response = self.create501Response()
-				if self.debug:
-					print "*************** Sending Response ***************\n" + response + "************************************************"
-				while True:
-					try:
-						self.clients[fileDesc].send(response)
-					except errno.EWOULDBLOCK:
-						if self.debug:
-							print "[SEND ERROR] Operation would block"
-						continue
-				return
+			return
+			
+		elif request.command != 'GET':
+			response = self.create501Response()
+			if self.debug:
+				print "*************** Sending Response ***************\n" + response + "************************************************"
+			while True:
+				try:
+					self.clients[fileDesc].send(response)
+				except errno.EWOULDBLOCK:
+					if self.debug:
+						print "[SEND ERROR - 501 Not Implemented] Operation would block"
+					continue
+			return
 
-			elif request.command == 'GET':
-				if request.headers['host'].find(":"):
-					host = request.headers['host'][:request.headers['host'].find(":")]
-				host = request.headers['host']
-				hostPath = self.hosts.get(host, None)
+		elif request.command == 'GET':
+			if request.headers['host'].find(":"):
+				host = request.headers['host'][:request.headers['host'].find(":")]
+			host = request.headers['host']
+			hostPath = self.hosts.get(host, None)
+			
+			if not hostPath:
+				hostPath = self.hosts['default']
 				
-				if not hostPath:
-					hostPath = self.hosts['default']
-					
-				if not request.path:
-					request.path = "/index.html"
-					
-				if request.path == "/":
-					request.path = "/index.html"
+			if not request.path:
+				request.path = "/index.html"
 				
-				filePath = hostPath + request.path
-				
-				if not os.path.isfile(filePath):
-					response = self.create404Response()
-					if self.debug:
-						print "*************** Sending Response ***************\n" + response + "************************************************"						
-					while True:
-						try:
-							self.clients[fileDesc].send(response)
-						except errno.EWOULDBLOCK:
-							if self.debug:
-								print "[SEND ERROR] Operation would block"
-							continue
-					return
-				
-				if not os.access(filePath, os.R_OK):
-					response = self.create403Response()
-					if self.debug:
-						print "*************** Sending Response ***************\n" + response + "\n************************************************"
-					while True:
-						try:
-							self.clients[fileDesc].send(response)
-						except errno.EWOULDBLOCK:
-							if self.debug:
-								print "[SEND ERROR] Operation would block"
-							continue
-					return
-					
-				reqFile = open(filePath);
-				response = self.create200Response(reqFile)
+			if request.path == "/":
+				request.path = "/index.html"
+			
+			filePath = hostPath + request.path
+			
+			if not os.path.isfile(filePath):
+				response = self.create404Response()
 				if self.debug:
-					print "*************** Sending Response ***************\n" + response + "File Contentss go here\n ************************************************"
-				# while True:
-					# try:
-						# self.clients[fileDesc].send(response)
-					# except errno.EWOULDBLOCK:
-						# if self.debug:
-							# print "[SEND ERROR] Operation would block"
-						# continue
-					# except socket.error, (value,message):
-						# if self.debug:
-							# print "[SOCKET ERROR] " + str(value) + " " + message
-						# continue
-									
-				while True:
-					filePiece = reqFile.read(self.size)
-					if filePiece == "":
-						break
-					response += filePiece
-					# self.clients[fileDesc].send(filePiece)
-					
+					print "*************** Sending Response ***************\n" + response + "************************************************"						
 				while True:
 					try:
 						self.clients[fileDesc].send(response)
 					except errno.EWOULDBLOCK:
 						if self.debug:
-							print "[SEND ERROR] Operation would block"
+							print "[SEND ERROR - 404 Not Found] Operation would block"
+						continue
+				return
+			
+			if not os.access(filePath, os.R_OK):
+				response = self.create403Response()
+				if self.debug:
+					print "*************** Sending Response ***************\n" + response + "\n************************************************"
+				while True:
+					try:
+						self.clients[fileDesc].send(response)
+					except errno.EWOULDBLOCK:
+						if self.debug:
+							print "[SEND ERROR - 403 Forbidden] Operation would block"
+						continue
+				return
+				
+			reqFile = open(filePath);
+			response = self.create200Response(reqFile)
+			if self.debug:
+				print "*************** Sending Response ***************\n" + response + "File Contents go here\n ************************************************"
+			while True:
+				try:
+					self.clients[fileDesc].send(response)
+				except errno.EWOULDBLOCK:
+					if self.debug:
+						print "[SEND ERROR - 200 OK - Header Creation] Operation would block"
+					continue
+				except socket.error, (value,message):
+					if self.debug:
+						print "[SOCKET ERROR - 200 OK - Header Creation] " + str(value) + " " + message
+					continue
+								
+			while True:
+				filePiece = reqFile.read(self.size)
+				if filePiece == "":
+					break					
+				while True:
+					try:
+						self.clients[fileDesc].send(response)
+					except errno.EWOULDBLOCK:
+						if self.debug:
+							print "[SEND ERROR - 200 OK - Body Creation] Operation would block"
 						continue
 					except socket.error, (value,message):
 						if self.debug:
-							print "[SOCKET ERROR] " + str(value) + " " + message
+							print "[SOCKET ERROR - 200 OK - Body creation] " + str(value) + " " + message
 						continue
-		
-		else:
-			self.poller.unregister(fileDesc)
-			self.clients[fileDesc].close()
-			del self.clients[fileDesc]		
+	
+#		else:
+#			self.poller.unregister(fileDesc)
+#			self.clients[fileDesc].close()
+#			del self.clients[fileDesc]
+#			del self.clientDatas[fileDesc]
 		
 	def create200Response(self, goodFile):
 		ext = goodFile.name.split('.')[-1]
