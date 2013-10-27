@@ -226,6 +226,10 @@ class Poller:
 						if self.debug:
 							print "[SEND ERROR] Operation would block"
 						continue
+					except socket.error, (value,message):
+						if self.debug:
+							print "[SOCKET ERROR] " + str(value) + " " + message
+						continue
 									
 				while True:
 					filePiece = reqFile.read(self.size)
