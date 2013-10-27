@@ -21,7 +21,7 @@ class Poller:
 		self.params = {}
 		self.configure()
 		self.open_socket()
-		self.size = 32768
+		self.size = 10240
 		
 	def configure(self):
 		""" Load configuration from web.conf"""
@@ -58,6 +58,7 @@ class Poller:
 
 	def run(self):
 		""" Use poll() to handle each incoming client."""
+		print "Server running on port " + str(self.port)
 		self.poller = select.epoll()
 		self.pollmask = select.EPOLLIN | select.EPOLLHUP | select.EPOLLERR
 		self.poller.register(self.server,self.pollmask)
@@ -127,45 +128,62 @@ class Poller:
 				
 				if not request.command:
 					response = self.create400Response()
+					if self.debug:
+						print "*************** Sending Response ***************\n" + response + "************************************************"
 					self.clients[fileDesc].send(response)
 					return
 				
 				elif request.command != 'GET':
 					response = self.create501Response()
+					if self.debug:
+						print "*************** Sending Response ***************\n" + response + "************************************************"
 					self.clients[fileDesc].send(response)
 					return
 
 				elif request.command == 'GET':
 					host = request.headers['host'][:request.headers['host'].find(":")]
-					hostPath = self.hosts[request.headers['host']]
+					hostPath = self.hosts[host]
+					
 					if not hostPath:
 						hostPath = self.hosts['default']
 						
-					if hostPath == "/":
-						hostPath = "/index.html"
+					if not request.path:
+						request.path = "/index.html"
+						
+					if request.path == "/":
+						request.path = "/index.html"
 					
 					filePath = hostPath + request.path
 					
 					if not os.path.isfile(filePath):
 						response = self.create404Response()
+						if self.debug:
+							print "*************** Sending Response ***************\n" + response + "************************************************"						
 						self.clients[fileDesc].send(response)
 						return
 					
 					if not os.access(filePath, os.R_OK):
 						response = self.create403Response()
+						if self.debug:
+							print "*************** Sending Response ***************\n" + response + "\n************************************************"
 						self.clients[fileDesc].send(response)
 						return
 						
 					reqFile = open(filePath);
 					response = self.create200Response(reqFile)
-					self.clients[fileDesc].send(response)
+					if self.debug:
+						print "*************** Sending Response ***************\n" + response + "File Contentss go here\n ************************************************"
+#					self.clients[fileDesc].send(response)
 										
 					while True:
-						filePart = reqFile.read(self.size)
-						if filePart == "":
+						filePiece = reqFile.read(self.size)
+						if filePiece == "":
 							break
+						response += filePiece					
+#						self.clients[fileDesc].send(filePiece)
 					
-						self.clients[fileDesc].send(filePart)
+					print "Response:\n" + response + "\n\n\n"
+					self.clients[fileDesc].send(response)
 				
 		else:
 			self.poller.unregister(fileDesc)
@@ -174,12 +192,12 @@ class Poller:
 		
 	def create200Response(self, goodFile):
 		ext = goodFile.name.split('.')[-1]
-		if not self.medias['conType']:
+		if not self.medias[ext]:
 			ext = '.txt'
 			
 		conType = self.medias[ext]
 		size = int(os.path.getsize(goodFile.name))
-		mTime = strftime('%a, %d %b %Y %H:%M:%S %Z', os.path.getmtime(goodFile.name))		
+		mTime = strftime('%a, %d %b %Y %H:%M:%S %Z', time.localtime(os.path.getmtime(goodFile.name)))		
 	
 		return 'HTTP/1.1 200 OK\r\n' + 'Date: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n' + 'Server: CS360_WebServer/0.0.0.0.1\r\n' + 'Content-Type: ' + conType + '\r\n' + 'Content-Length: ' + str(size)+ '\r\n' + 'Last-Modified: ' + mTime + '\r\n\r\n'	
 	
@@ -198,8 +216,7 @@ class Poller:
 	def create400Response(self):
 		return 'HTTP/1.1 400 Bad Request\r\n' + 'Date: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n' + 'Server: CS360_WebServer/0.0.0.0.1\r\n' + 'Content-Type: text/html\r\n' + 'Content-Length: 50\r\n' + 'Last-Modified: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n\r\n' + '<html><body><h1>400 Bad Request</h1></body></html>\r\n'
 		
-	
-			
+		
 	def validRequestInCache(self, fileDesc):
 		return "\r\n\r\n" in self.clientDatas[fileDesc].cache
 	
