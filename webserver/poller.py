@@ -149,6 +149,8 @@ class Poller:
 					host = request.headers['host']
 					hostPath = self.hosts[host]
 					
+					print hostPath
+					
 					if not hostPath:
 						hostPath = self.hosts['default']
 						
