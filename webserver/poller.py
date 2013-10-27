@@ -125,7 +125,8 @@ class Poller:
 			self.clientDatas[fileDesc].cache += data
 			if self.validRequestInCache(fileDesc):
 				requestData = self.removeRequestFromCache(fileDesc)
-				print "[REQUEST DATA]\n" + requestData + "\n"
+				
+				if self.debug: print "[REQUEST DATA]\n" + requestData + "\n"
 				request = HTTPRequest(requestData)
 				
 				if not request.command:
@@ -146,7 +147,7 @@ class Poller:
 					if request.headers['host'].find(":"):
 						host = request.headers['host'][:request.headers['host'].find(":")]
 					host = request.headers['host']
-					hostPath = self.hosts.get(host, None)#[host]
+					hostPath = self.hosts.get(host, None)
 					
 					if not hostPath:
 						hostPath = self.hosts['default']
