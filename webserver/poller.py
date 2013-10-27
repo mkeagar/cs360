@@ -3,6 +3,7 @@ import socket
 import sys
 import time
 import os
+import errno
 
 from HTTPRequest import HTTPRequest
 from clientdata import ClientData
@@ -118,11 +119,29 @@ class Poller:
 		self.clientDatas[client.fileno()] = ClientData(time.time())
 
 	def handleClient(self,fileDesc):
-		data = self.clients[fileDesc].recv(self.size)
-		if data:
 		
+		while True:
+			try:
+				data = self.clients[fileDesc].recv(self.size)
+				if data:
+					self.clientDatas[fileDesc].cache += data
+					if self.validRequestInCache(fileDesc):
+						break;
+					
+			except errno.EAGAIN:
+				if self.debug:
+					print "[RECV ERROR] Try again"
+				continue
+			except errno.EWOULDBLOCK:
+				if self.debug:
+					print "[RECV ERROR] Operation would block"
+				continue
+		
+		if data:
 			if self.debug: print "[DATA]\n" + data + "\n"
+			
 			self.clientDatas[fileDesc].cache += data
+			
 			if self.validRequestInCache(fileDesc):
 				requestData = self.removeRequestFromCache(fileDesc)
 				
@@ -133,7 +152,14 @@ class Poller:
 					response = self.create400Response()
 					if self.debug:
 						print "*************** Sending Response ***************\n" + response + "************************************************"
-					self.clients[fileDesc].send(response)
+					while True:
+						try:
+							self.clients[fileDesc].send(response)
+						except errno.EWOULDBLOCK:
+							if self.debug:
+								print "[SEND ERROR] Operation would block"
+							continue
+						
 					return
 				
 				elif request.command != 'GET':
