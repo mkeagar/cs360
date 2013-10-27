@@ -219,7 +219,13 @@ class Poller:
 				response = self.create200Response(reqFile)
 				if self.debug:
 					print "*************** Sending Response ***************\n" + response + "File Contentss go here\n ************************************************"
-				self.clients[fileDesc].send(response)
+				while True:
+					try:
+						self.clients[fileDesc].send(response)
+					except errno.EWOULDBLOCK:
+						if self.debug:
+							print "[SEND ERROR] Operation would block"
+						continue
 									
 				while True:
 					filePiece = reqFile.read(self.size)
