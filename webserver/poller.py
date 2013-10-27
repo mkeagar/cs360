@@ -147,7 +147,7 @@ class Poller:
 					if request.headers['host'].find(":"):
 						host = request.headers['host'][:request.headers['host'].find(":")]
 					host = request.headers['host']
-					hostPath = self.hosts[host]
+					hostPath = self.hosts.get(host, None)#[host]
 					
 					if self.debug:
 						print "[Hostpath] " + hostPath
