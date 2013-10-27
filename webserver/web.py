@@ -1,14 +1,14 @@
 """
-A TCP echo server that handles multiple clients with polling.  Typing
-Control-C will quit the server.
+A Web server that handles multiple clients using polling.  It implements some, but not all of HTTP/1.1.
+Typing Control-C will quit the server.
 """
 
 import argparse
 
 from poller import Poller
 
-class Main:
-	""" Parse command line options and perform the download. """
+class WebServer:
+	""" Parse command line options and perform the start the server. """
 	def __init__(self):
 		self.parse_arguments()
 
@@ -24,8 +24,7 @@ class Main:
 		p.run()
 
 if __name__ == "__main__":
-	m = Main()
-#	m.parse_arguments()
+	m = WebServer()
 	try:
 		m.run()
 	except KeyboardInterrupt:
