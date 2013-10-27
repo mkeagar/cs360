@@ -91,7 +91,6 @@ class Poller:
 				timeCount = 0
 				self.checkAndDestroy()
 				
-
 	def checkAndDestroy(self):
 		for fileDesc, client in self.clientDatas.items():
 			if self.clients.get(fileDesc, None):	
@@ -186,8 +185,6 @@ class Poller:
 							break
 						response += filePiece					
 						self.clients[fileDesc].send(filePiece)
-
-#					self.clients[fileDesc].send(response)
 				
 		else:
 			self.poller.unregister(fileDesc)
@@ -215,7 +212,7 @@ class Poller:
 		return 'HTTP/1.1 404 Not Found\r\n' + 'Date: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n' + 'Server: CS360_WebServer/0.0.0.0.1\r\n' + 'Content-Type: text/html\r\n' + 'Content-Length: 44\r\n' + 'Last-Modified: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n\r\n' + '<html><body><h1>Error 404</h1></body></html>\r\n'
 		
 	def create403Response(self):
-		return 'HTTP/1.1 403 Forbidden\r\n' + 'Date: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n' + 'Server: CS360_WebServer/0.0.0.0.1\r\n' + 'Content-Type: text/html\r\n' + 'Content-Length: 64\r\n' + 'Last-Modified: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n\r\n' + '<html><body><h1>403 Forbidden: You\'re a n00b!</h1></body></html>\r\n'
+		return 'HTTP/1.1 403 Forbidden\r\n' + 'Date: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n' + 'Server: CS360_WebServer/0.0.0.0.1\r\n' + 'Content-Type: text/html\r\n' + 'Content-Length: 64\r\n' + 'Last-Modified: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n\r\n' + '<html><body><h1>403 Forbidden: That\'s no good, son!</h1></body></html>\r\n'
 		
 	def create400Response(self):
 		return 'HTTP/1.1 400 Bad Request\r\n' + 'Date: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n' + 'Server: CS360_WebServer/0.0.0.0.1\r\n' + 'Content-Type: text/html\r\n' + 'Content-Length: 50\r\n' + 'Last-Modified: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n\r\n' + '<html><body><h1>400 Bad Request</h1></body></html>\r\n'
