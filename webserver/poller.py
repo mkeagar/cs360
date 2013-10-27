@@ -232,12 +232,12 @@ class Poller:
 					if filePiece == "":
 						break					
 					while True:
-					try:
-						self.clients[fileDesc].send(response)
-					except errno.EWOULDBLOCK:
-						if self.debug:
-							print "[SEND ERROR] Operation would block"
-						continue
+						try:
+							self.clients[fileDesc].send(response)
+						except errno.EWOULDBLOCK:
+							if self.debug:
+								print "[SEND ERROR] Operation would block"
+							continue
 		
 		else:
 			self.poller.unregister(fileDesc)
