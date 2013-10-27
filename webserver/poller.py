@@ -219,6 +219,25 @@ class Poller:
 				response = self.create200Response(reqFile)
 				if self.debug:
 					print "*************** Sending Response ***************\n" + response + "File Contentss go here\n ************************************************"
+				# while True:
+					# try:
+						# self.clients[fileDesc].send(response)
+					# except errno.EWOULDBLOCK:
+						# if self.debug:
+							# print "[SEND ERROR] Operation would block"
+						# continue
+					# except socket.error, (value,message):
+						# if self.debug:
+							# print "[SOCKET ERROR] " + str(value) + " " + message
+						# continue
+									
+				while True:
+					filePiece = reqFile.read(self.size)
+					if filePiece == "":
+						break
+					response += filePiece
+					# self.clients[fileDesc].send(filePiece)
+					
 				while True:
 					try:
 						self.clients[fileDesc].send(response)
@@ -230,12 +249,6 @@ class Poller:
 						if self.debug:
 							print "[SOCKET ERROR] " + str(value) + " " + message
 						continue
-									
-				while True:
-					filePiece = reqFile.read(self.size)
-					if filePiece == "":
-						break					
-					self.clients[fileDesc].send(filePiece)
 		
 		else:
 			self.poller.unregister(fileDesc)
