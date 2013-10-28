@@ -123,7 +123,10 @@ class Poller:
 		
 		while True:
 			try:
-				data = self.clients.get(fileDesc, None).recv(self.size)
+				currentClient = self.clients.get(fileDesc, None)
+				data = None
+				if currentClient:
+					data = currentClient.recv(self.size)
 				if data:
 					self.clientDatas[fileDesc].cache += data
 					if self.validRequestInCache(fileDesc):
