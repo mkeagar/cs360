@@ -243,18 +243,19 @@ class Poller:
 			while True:
 				filePiece = reqFile.read(self.size)
 				if filePiece == "":
-					break					
-				while True:
-					try:
-						self.clients[fileDesc].send(response)
-					except errno.EWOULDBLOCK:
-						if self.debug:
-							print "[SEND ERROR - 200 OK - Body Creation] Operation would block"
-						continue
-					except socket.error, (value,message):
-						if self.debug:
-							print "[SOCKET ERROR - 200 OK - Body creation] " + str(value) + " " + message
-						continue
+					break
+				self.clients[fileDesc].send(response)
+				# while True:
+					# try:
+						# self.clients[fileDesc].send(response)
+					# except errno.EWOULDBLOCK:
+						# if self.debug:
+							# print "[SEND ERROR - 200 OK - Body Creation] Operation would block"
+						# continue
+					# except socket.error, (value,message):
+						# if self.debug:
+							# print "[SOCKET ERROR - 200 OK - Body creation] " + str(value) + " " + message
+						# continue
 	
 #		else:
 #			self.poller.unregister(fileDesc)
