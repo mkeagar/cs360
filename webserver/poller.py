@@ -241,11 +241,11 @@ class Poller:
 			self.clients[fileDesc].send(response)
 								
 			while True:
-				if self.debug:
-					print filePiece
 				filePiece = reqFile.read(self.size)
 				if filePiece == "":
 					break
+				if self.debug:
+					print filePiece
 				self.clients[fileDesc].send(response)
 				# while True:
 					# try:
