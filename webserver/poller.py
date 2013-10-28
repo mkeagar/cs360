@@ -129,11 +129,11 @@ class Poller:
 					if self.validRequestInCache(fileDesc):
 						break;
 						
-				else:
-					self.poller.unregister(fileDesc)
-					self.clients[fileDesc].close()
-					del self.clients[fileDesc]
-					del self.clientDatas[fileDesc]		
+				# else:
+					# self.poller.unregister(fileDesc)
+					# self.clients[fileDesc].close()
+					# del self.clients[fileDesc]
+					# del self.clientDatas[fileDesc]		
 					
 			except errno.EAGAIN:
 				if self.debug:
@@ -243,8 +243,6 @@ class Poller:
 					filePiece = reqFile.read(self.size)
 					if filePiece == "":
 						break
-					if self.debug:
-						print filePiece
 					self.clients[fileDesc].send(response)
 					# while True:
 						# try:
