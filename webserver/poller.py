@@ -226,17 +226,19 @@ class Poller:
 			response = self.create200Response(reqFile)
 			if self.debug:
 				print "*************** Sending Response ***************\n" + response + "File Contents go here\n ************************************************"
-			while True:
-				try:
-					self.clients[fileDesc].send(response)
-				except errno.EWOULDBLOCK:
-					if self.debug:
-						print "[SEND ERROR - 200 OK - Header Creation] Operation would block"
-					continue
-				except socket.error, (value,message):
-					if self.debug:
-						print "[SOCKET ERROR - 200 OK - Header Creation] " + str(value) + " " + message
-					continue
+			# while True:
+				# try:
+					# self.clients[fileDesc].send(response)
+				# except errno.EWOULDBLOCK:
+					# if self.debug:
+						# print "[SEND ERROR - 200 OK - Header Creation] Operation would block"
+					# continue
+				# except socket.error, (value,message):
+					# if self.debug:
+						# print "[SOCKET ERROR - 200 OK - Header Creation] " + str(value) + " " + message
+					# continue
+					
+			self.clients[fileDesc].send(response)
 								
 			while True:
 				filePiece = reqFile.read(self.size)
