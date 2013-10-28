@@ -1,0 +1,19 @@
+Michael K. Eagar
+CS 360
+10/26/2013
+
+Lab 4 - Web Server - Report
+
+	My Code
+		My implmentation for the Web Server lab consist of 4 files:
+		• web.py
+		• poller.py
+		• clientdata.py
+		• HTTPRequest.py
+		
+		To run the program, enter this from the command line:
+			python web.py
+			
+			•Note: optional flags include -d, to turn on debug mode, and -p to select which port the server should bind to (Default is 8080).
+			
+		
