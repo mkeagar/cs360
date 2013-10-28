@@ -150,7 +150,7 @@ class Poller:
 			requestData = self.removeRequestFromCache(fileDesc)
 				
 			if self.debug: print "[REQUEST DATA]\n" + requestData + "\n"
-				request = HTTPRequest(requestData)
+			request = HTTPRequest(requestData)
 			
 			if not request.command:
 				response = self.create400Response()
