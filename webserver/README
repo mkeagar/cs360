@@ -6,14 +6,26 @@ Lab 4 - Web Server - Report
 
 	My Code
 		My implmentation for the Web Server lab consist of 4 files:
-		• web.py
-		• poller.py
-		• clientdata.py
-		• HTTPRequest.py
+		+ web.py
+		+ poller.py
+		+ clientdata.py
+		+ HTTPRequest.py
 		
 		To run the program, enter this from the command line:
-			python web.py
+			"python web.py"
 			
-			•Note: optional flags include -d, to turn on debug mode, and -p to select which port the server should bind to (Default is 8080).
+			+Note: optional flags include -d, to turn on debug mode, and -p to select which port the server should bind to (Default is 8080).
 			
-		
+		Non-blocking I/O:
+			+ recv(): In my handleClient() method in poller.py, I loop on recv(). If I get some data, I add that to the client's cache until I have a valid request, and then begine processing that request. If recv throws an EAGAIN or EWOULDBLOCK exception, I break from the loop and return from handleClient(). The recv() loop is processed on lines 125 to 148 of poller.py.
+			
+			+ send(): In handleClient(), when I need to send a response to a client, I call a sendResponse() method where I loop on send() until the bytes sent to the client are equal to the length of the response we are trying to send, and then break out of the loop and return. If send() throws an EAGAIN or EWOULDBLOCK exception, I catch it and continue the loop so we can keep trying to send. I call the sendResponse() method on in poller.py on lines 164, 171, 195, 202, 209, 218, and 225.
+			
+		timeouts:
+			I am handling timeouts in my program by checking to see if the client has been inactive for longer than the timeout parameter supplied in the web.conf file. I am setting the timeout to the timeout parameter supplie on line 72 of poller.py.  I then initialize a time counter, and increment it by time passed on line 76, and when the time counter is greater than the time out (line 91), I check my clients to see if any have been inactive for longer than the timeout parameter (line 98), and close any that have.
+			
+		caching:
+			I created a helper class called ClientFile in clientfile.py to handle caching for clients. In handleClient() in poller.py, if I have recieved data from the client I add that data to the clients cache (line 132) and then check to see if the cache contains a valid request (line 133).  If it doesn't, I get more data from the client.  If it has a valid request, I remove the request from the cache (line 152), and process it.  The validRequestInCache() method is defined on line 270, and the removeRequestFromCache() method is defined on line 273.
+			
+		extra-credit:
+			I have done the extra-credit.  I have implemented the webserver so it can handle requests from the the download accelerator.  See "else if" statement on line 174, and the "if" statements on line 211 and 214

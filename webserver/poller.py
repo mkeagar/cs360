@@ -6,7 +6,7 @@ import os
 import errno
 
 from HTTPRequest import HTTPRequest
-from clientdata import ClientData
+from clientfile import ClientFile
 from time import strftime
 
 class Poller:
@@ -16,7 +16,7 @@ class Poller:
 		self.port = port
 		self.debug = debug
 		self.clients = {}
-		self.clientDatas = {}
+		self.clientFiles = {}
 		self.hosts = {}
 		self.medias = {}
 		self.params = {}
@@ -85,7 +85,7 @@ class Poller:
 					self.handleServer()
 					continue
 				# handle client socket
-				self.clientDatas[fileDesc].lastUse = time.time()
+				self.clientFiles[fileDesc].lastUse = time.time()
 				result = self.handleClient(fileDesc)
 			
 			if timeCount > self.params['timeout']:
@@ -93,11 +93,11 @@ class Poller:
 				self.checkAndDestroy()
 				
 	def checkAndDestroy(self):
-		for fileDesc, client in self.clientDatas.items():
+		for fileDesc, client in self.clientFiles.items():
 			if self.clients.get(fileDesc, None):	
 				if time.time() - client.lastUse > self.params['timeout']:
 					if self.debug:
-						print "[checkAndDestroy] Closing Client #" + fileDesc
+						print "[checkAndDestroy] Closing Client #" + str(fileDesc)
 					self.poller.unregister(fileDesc)
 					self.closeClient(fileDesc)
 
@@ -111,7 +111,7 @@ class Poller:
 		else:
 			# close the socket
 			if self.debug:
-				print "[handlError] Closing Client #" + fileDesc
+				print "[handlError] Closing Client #" + str(fileDesc)
 			self.closeClient(fileDesc)
 
 	def handleServer(self):
@@ -119,11 +119,9 @@ class Poller:
 		client.setblocking(0)
 		self.clients[client.fileno()] = client
 		self.poller.register(client.fileno(),self.pollmask)
-		self.clientDatas[client.fileno()] = ClientData(time.time())
+		self.clientFiles[client.fileno()] = ClientFile(time.time())
 
 	def handleClient(self,fileDesc):
-		if self.debug:
-			print "[handleClient] Clients in dictionary: " + str(len(self.clients))
 		while True:
 			try:
 				currentClient = self.clients.get(fileDesc, None)
@@ -131,17 +129,15 @@ class Poller:
 				if currentClient:
 					data = currentClient.recv(self.size)
 				if data:
-					self.clientDatas[fileDesc].cache += data
+					self.clientFiles[fileDesc].cache += data
 					if self.validRequestInCache(fileDesc):
-						break;
-						
+						break;		
 				else:
 					if self.debug:
-						print "[handleClient] Closing Client #" + fileDesc
+						print "[handleClient] Closing Client #" + str(fileDesc)
 					self.poller.unregister(fileDesc)
 					self.closeClient(fileDesc)
-					return		
-					
+					return
 			except errno.EAGAIN:
 				if self.debug:
 					print "[RECV ERROR] Try again"
@@ -156,45 +152,26 @@ class Poller:
 		requestData = self.removeRequestFromCache(fileDesc)
 			
 		if self.debug: print "[REQUEST DATA]\n" + requestData + "\n"
-		request = HTTPRequest(requestData)
 		
-		if not request.command:
+		request = HTTPRequest(requestData)
+		reqCom = request.command
+		
+		if not (reqCom == 'GET' or reqCom == 'DELETE' or reqCom == 'PUT' or reqCom == 'TRACE' \
+		or reqCom == 'HEAD' or reqCom == 'OPTIONS' or reqCom == 'CONNECT'):
 			response = self.create400Response()
 			if self.debug:
 				print "*************** Sending Response ***************\n" + response + "************************************************"
-			while True:
-				try:
-					self.clients[fileDesc].send(response)
-					break
-				except errno.EAGAIN:
-						if self.debug:
-							print "[SEND ERROR - 400 Bad Request] Try again"
-						continue
-				except errno.EWOULDBLOCK:
-					if self.debug:
-						print "[SEND ERROR - 400 Bad Request] Operation would block"
-					continue
+			self.sendResponse(fileDesc, response)
 			return
 			
-		elif request.command != 'GET':
+		elif reqCom != 'GET' and reqCom != 'HEAD':
 			response = self.create501Response()
 			if self.debug:
 				print "*************** Sending Response ***************\n" + response + "************************************************"
-			while True:
-				try:
-					self.clients[fileDesc].send(response)
-					break
-				except errno.EAGAIN:
-						if self.debug:
-							print "[SEND ERROR - 501 Not Implemented] Try again"
-						continue
-				except errno.EWOULDBLOCK:
-					if self.debug:
-						print "[SEND ERROR - 501 Not Implemented] Operation would block"
-					continue
+			self.sendResponse(fileDesc, response)
 			return
 
-		elif request.command == 'GET':
+		elif reqCom == 'GET' or reqCom == 'HEAD':
 			if request.headers['host'].find(":"):
 				host = request.headers['host'][:request.headers['host'].find(":")]
 			host = request.headers['host']
@@ -214,81 +191,56 @@ class Poller:
 			if not os.path.isfile(filePath):
 				response = self.create404Response()
 				if self.debug:
-					print "*************** Sending Response ***************\n" + response + "************************************************"						
-				while True:
-					try:
-						self.clients[fileDesc].send(response)
-						break
-					except errno.EAGAIN:
-						if self.debug:
-							print "[SEND ERROR - 404 Not Found] Try again"
-						continue
-					except errno.EWOULDBLOCK:
-						if self.debug:
-							print "[SEND ERROR - 404 Not Found] Operation would block"
-						continue
+					print "*************** Sending Response ***************\n" + response + "************************************************"
+				self.sendResponse(fileDesc, response)
 				return
 			
 			if not os.access(filePath, os.R_OK):
 				response = self.create403Response()
 				if self.debug:
 					print "*************** Sending Response ***************\n" + response + "\n************************************************"
-				while True:
-					try:
-						self.clients[fileDesc].send(response)
-						break
-					except errno.EAGAIN:
-						if self.debug:
-							print "[SEND ERROR - 403 Forbidden] Try again"
-						continue
-					except errno.EWOULDBLOCK:
-						if self.debug:
-							print "[SEND ERROR - 403 Forbidden] Operation would block"
-						continue
-				return
+				self.sendResponse(fileDesc, response)
+				return	
 				
 			reqFile = open(filePath);
 			response = self.create200Response(reqFile)
 			if self.debug:
 				print "*************** Sending Response ***************\n" + response + "File Contents go here\n ************************************************"
-			bytesSent = 0
-			while True:
-				try:
-					if self.debug:
-						print "[RESPONSE]\n" + response + "\n[END RESPONSE]"
-					bytesSent += self.clients[fileDesc].send(response[bytesSent:])
-					break
-				except errno.EWOULDBLOCK:
-					if self.debug:
-						print "[SEND ERROR - 200 OK - Header Creation] Operation would block\n[BYTES SENT] " + str(bytesSent)
-					continue
-				except socket.error, (value,message):
-					if self.debug:
-						print "[SOCKET ERROR - 200 OK - Header Creation] " + str(value) + " " + message + "\n[BYTES SENT] " + str(bytesSent)
-					self.poller.unregister(fileDesc)
-					self.closeClient(fileDesc)
-					return
-					
-			self.clients[fileDesc].send(response)
-								
+			self.sendResponse(fileDesc, response)
+			
+			if reqCom == 'HEAD':
+				return
+						
+			if request.headers.get('range', None):
+				rangeArray = request.headers['range'].split('=')[1].split('-')
+				reqFile.seek(int(rangeArray[0]))
+				filePiece = reqFile.read(int(rangeArray[1]) - int(rangeArray[0]))
+				self.sendResponse(fileDesc, filePiece)
+				return
+						
 			while True:
 				filePiece = reqFile.read(self.size)
 				if filePiece == "":
 					break
-				bytesSent = 0
-				while True:
-					try:
-						bytesSent += self.clients[fileDesc].send(filePiece[bytesSent:])
-						break
-					except errno.EWOULDBLOCK:
-						if self.debug:
-							print "[SEND ERROR - 200 OK - Body Creation] Operation would block\n[BYTES SENT] " + str(bytesSent)
-						continue
-					except socket.error, (value,message):
-						if self.debug:
-							print "[SOCKET ERROR - 200 OK - Body creation] " + str(value) + " " + message + "\n[BYTES SENT] " + str(bytesSent)
-						continue
-		
+				self.sendResponse(fileDesc, filePiece)	
+	
+	def sendResponse(self, fileDesc, response):
+		bytesSent = 0;
+		while True:
+			try:
+				bytesSent += self.clients[fileDesc].send(response[bytesSent:])
+				if bytesSent >= len(response):
+					break
+			except Exception, exc:
+				if exc.errno == errno.EAGAIN:
+					if self.debug:
+						print "[CLIENT #" + str(fileDesc) + " SEND ERROR] Try again"
+					continue
+				elif exc.errno == errno.EWOULDBLOCK:
+					if self.debug:
+						print "[CLIENT #" + str(fileDesc) + " SEND ERROR] Operation would block"
+					continue
+	
 	def create200Response(self, goodFile):
 		ext = goodFile.name.split('.')[-1]
 		if not self.medias[ext]:
@@ -315,20 +267,19 @@ class Poller:
 	def create400Response(self):
 		return 'HTTP/1.1 400 Bad Request\r\n' + 'Date: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n' + 'Server: CS360_WebServer/0.0.0.0.1\r\n' + 'Content-Type: text/html\r\n' + 'Content-Length: 50\r\n' + 'Last-Modified: ' + strftime('%a, %d %b %Y %H:%M:%S %Z') + '\r\n\r\n' + '<html><body><h1>400 Bad Request</h1></body></html>\r\n'
 		
-		
 	def validRequestInCache(self, fileDesc):
-		return "\r\n\r\n" in self.clientDatas[fileDesc].cache
+		return "\r\n\r\n" in self.clientFiles[fileDesc].cache
 	
 	def removeRequestFromCache(self, fileDesc):
-		endIndex = self.clientDatas[fileDesc].cache.find("\r\n\r\n")
-		request = self.clientDatas[fileDesc].cache[:endIndex + 4]
-		self.clientDatas[fileDesc].cache = self.clientDatas[fileDesc].cache[endIndex + 4:]
+		endIndex = self.clientFiles[fileDesc].cache.find("\r\n\r\n")
+		request = self.clientFiles[fileDesc].cache[:endIndex + 4]
+		self.clientFiles[fileDesc].cache = self.clientFiles[fileDesc].cache[endIndex + 4:]
 		return request
 	
 	def closeClient(self, fileDesc):
 		self.clients[fileDesc].close()
 		del self.clients[fileDesc]
-		del self.clientDatas[fileDesc]
+		del self.clientFiles[fileDesc]
 		
 		
 	
