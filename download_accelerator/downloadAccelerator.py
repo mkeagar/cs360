@@ -55,7 +55,7 @@ class DownloadAccelerator:
 				endByte = int(r.headers['content-length'])
 			d = DownThread(self.url, startByte, endByte)
 			threads.append(d)
-			startByte = endByte
+			startByte = endByte + 1
 			endByte = startByte + partSize
 			
 		# start our threads downloading!
