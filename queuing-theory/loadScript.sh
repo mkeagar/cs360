@@ -1,0 +1,32 @@
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 1 -d 30 &> load_nginx_1.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 2 -d 30 &> load_nginx_2.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 3 -d 30 &> load_nginx_3.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 4 -d 30 &> load_nginx_4.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 5 -d 30 &> load_nginx_5.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 6 -d 30 &> load_nginx_6.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 7 -d 30 &> load_nginx_7.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 8 -d 30 &> load_nginx_8.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 9 -d 30 &> load_nginx_9.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 4000 -l 10 -d 30 &> load_nginx_10.txt
+
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 1 -d 30 &> load_lighttpd_1.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 2 -d 30 &> load_lighttpd_2.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 3 -d 30 &> load_lighttpd_3.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 4 -d 30 &> load_lighttpd_4.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 5 -d 30 &> load_lighttpd_5.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 6 -d 30 &> load_lighttpd_6.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 7 -d 30 &> load_lighttpd_7.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 8 -d 30 &> load_lighttpd_8.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 9 -d 30 &> load_lighttpd_9.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 3000 -l 10 -d 30 &> load_lighttpd_10.txt
+
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 1 -d 30 &> load_webserver_1.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 2 -d 30 &> load_webserver_2.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 3 -d 30 &> load_webserver_3.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 4 -d 30 &> load_webserver_4.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 5 -d 30 &> load_webserver_5.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 6 -d 30 &> load_webserver_6.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 7 -d 30 &> load_webserver_7.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 8 -d 30 &> load_webserver_8.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 9 -d 30 &> load_webserver_9.txt
+python ../../web-server-testing/tests/generator.py --server localhost --port 8080 -l 10 -d 30 &> load_webserver_10.txt
